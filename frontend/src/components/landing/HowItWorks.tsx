@@ -13,12 +13,12 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-24 py-6"
+      className="scroll-mt-24 py-8"
       aria-labelledby="how-heading"
     >
       <div className="tl-rule" />
-      <Frame className="grid gap-12 py-20 lg:grid-cols-12">
-        <div className="lg:col-span-4">
+      <Frame className="py-16">
+        <div className="max-w-xl">
           <p className="tl-kicker">How it works</p>
           <h2
             id="how-heading"
@@ -26,22 +26,14 @@ export function HowItWorks() {
           >
             Nine steps. One reviewable change.
           </h2>
-          <p className="mt-5 max-w-sm text-sm leading-relaxed text-[var(--tl-muted)]">
-            The intended operating model after you connect GitHub. Work is
-            proposed as a pull request — not a production deploy.
-          </p>
         </div>
-        <ol className="relative lg:col-span-8">
-          <span
-            aria-hidden="true"
-            className="absolute top-2 bottom-2 left-[0.85rem] w-px bg-[var(--tl-line)]"
-          />
+        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {howItWorksSteps.map((step, index) => (
-            <li key={step} className="relative flex gap-5 pb-6 last:pb-0">
-              <span className="relative z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--tl-line)] bg-[var(--tl-bg)] font-mono text-[0.65rem] text-[var(--tl-signal)]">
+            <li key={step} className="tl-panel relative overflow-hidden p-5 min-h-[9.5rem]">
+              <span className="font-mono text-4xl font-semibold leading-none text-[var(--tl-signal)] opacity-80">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <p className="pt-1 text-[0.95rem] leading-relaxed">{step}</p>
+              <p className="mt-6 text-sm font-medium leading-relaxed">{step}</p>
             </li>
           ))}
         </ol>

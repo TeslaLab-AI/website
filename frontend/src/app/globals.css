@@ -137,6 +137,11 @@ body {
   color: var(--tl-ink);
 }
 
+.tl-console {
+  background: #101114;
+  border: 1px solid var(--tl-line);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tl-btn-primary,
   .tl-btn-ghost {

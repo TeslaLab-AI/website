@@ -3,7 +3,7 @@
  * Shows the intended TeslaLab maintenance workflow.
  *
  * Responsibilities:
- * - Communicate detect-to-review as the product operating sequence.
+ * - Communicate detect-to-review as a visual operating sequence.
  */
 
 import { productFlowSteps } from "./content";
@@ -11,29 +11,31 @@ import { Frame } from "./Frame";
 
 export function ProductFlow() {
   return (
-    <section className="pb-20" aria-labelledby="flow-heading">
+    <section className="pb-8" aria-labelledby="flow-heading">
       <Frame>
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <p className="tl-kicker">Product flow</p>
-            <h2
-              id="flow-heading"
-              className="mt-3 text-3xl font-semibold tracking-[-0.03em]"
-            >
-              From detection to human review.
-            </h2>
-          </div>
-        </div>
-        <ol className="mt-10 grid gap-px bg-[var(--tl-line)] sm:grid-cols-2 lg:grid-cols-7">
+        <p className="tl-kicker">Product flow</p>
+        <h2
+          id="flow-heading"
+          className="mt-3 text-3xl font-semibold tracking-[-0.03em]"
+        >
+          From detection to human review.
+        </h2>
+        <ol className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
           {productFlowSteps.map((step, index) => (
-            <li
-              key={step}
-              className="min-h-[9.5rem] bg-[var(--tl-bg)] p-4"
-            >
-              <span className="font-mono text-[0.7rem] text-[var(--tl-signal)]">
+            <li key={step} className="tl-panel relative min-h-[10.5rem] p-4">
+              <span
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--tl-signal)] font-mono text-xs text-[var(--tl-signal)]"
+                aria-hidden="true"
+              >
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <p className="mt-8 text-sm font-medium leading-snug">{step}</p>
+              {index < productFlowSteps.length - 1 ? (
+                <span
+                  className="absolute top-8 right-[-0.55rem] hidden h-px w-3 bg-[var(--tl-signal)] lg:block"
+                  aria-hidden="true"
+                />
+              ) : null}
+              <p className="mt-8 text-sm font-semibold leading-snug">{step}</p>
             </li>
           ))}
         </ol>
