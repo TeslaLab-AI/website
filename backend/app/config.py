@@ -33,7 +33,8 @@ def state_secret() -> str:
 
 
 def github_app_slug() -> str:
-    return _require("GITHUB_APP_NAME")
+    # Changed from GITHUB_APP_NAME to GITHUB_APP_SLUG to correctly map to the URL slug required by GitHub Apps
+    return _require("GITHUB_APP_SLUG")
 
 
 def supabase_url() -> str:
@@ -42,3 +43,13 @@ def supabase_url() -> str:
 
 def supabase_publishable_key() -> str:
     return _require("SUPABASE_PUBLISHABLE_KEY")
+
+
+def supabase_service_role_key() -> str:
+    # Added to access the Supabase service role key, needed to bypass RLS when inserting GitHub installation records
+    return _require("SUPABASE_SERVICE_ROLE_KEY")
+
+
+def frontend_url() -> str:
+    # Added to know where to redirect the user after a successful GitHub App installation flow
+    return _require("FRONTEND_URL").rstrip("/")
