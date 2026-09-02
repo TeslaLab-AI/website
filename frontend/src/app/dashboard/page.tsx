@@ -1,4 +1,19 @@
-export default function DashboardPage() {
+/**
+ * Purpose:
+ * Renders the dashboard workspace home, including GitHub connection empty state.
+ *
+ * Responsibilities:
+ * - Prompt the user to start GitHub App installation when no install exists.
+ */
+import { ConnectGitHubButton } from '@/components/github/ConnectGitHubButton'
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ connect_error?: string }>
+}) {
+  const params = await searchParams
+
   return (
     <div className="p-6 md:p-10 w-full max-w-5xl mx-auto">
       <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-8">
@@ -20,11 +35,17 @@ export default function DashboardPage() {
         <p className="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-8 leading-relaxed">
           TeslaLab AI needs access to your GitHub account to list your repositories, perform automated scans, and generate maintenance fixes.
         </p>
-        
 
-        <button className="inline-flex items-center justify-center py-2.5 px-5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-          Connect GitHub App
-        </button>
+        {params.connect_error ? (
+          <p className="mb-4 text-sm text-red-600 dark:text-red-400" role="alert">
+            GitHub connection could not be started. Try again.
+          </p>
+        ) : null}
+
+        <ConnectGitHubButton
+          label="Connect GitHub App"
+          className="inline-flex items-center justify-center py-2.5 px-5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        />
       </div>
     </div>
   )
