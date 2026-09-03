@@ -33,7 +33,7 @@ def state_secret() -> str:
 
 
 def github_app_slug() -> str:
-    return _require("GITHUB_APP_NAME")
+    return _require("GITHUB_APP_SLUG")
 
 
 def supabase_url() -> str:
@@ -42,3 +42,17 @@ def supabase_url() -> str:
 
 def supabase_publishable_key() -> str:
     return _require("SUPABASE_PUBLISHABLE_KEY")
+
+
+def supabase_service_role_key() -> str:
+    return _require("SUPABASE_SERVICE_ROLE_KEY")
+
+
+def github_app_id() -> str:
+    return _require("GITHUB_APP_ID")
+
+
+def github_app_private_key() -> str:
+    # GitHub private keys typically have actual newlines or escaped \n in env vars
+    key = _require("GITHUB_APP_PRIVATE_KEY")
+    return key.replace("\\n", "\n")
