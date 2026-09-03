@@ -33,6 +33,8 @@ export default async function DashboardLayout({
   const workspace = workspaces?.[0]
   
   let hasGithub = false
+  let selectedRepo = null
+  
   if (workspace) {
     const { data: installations } = await supabase
       .from('github_installations')
@@ -40,6 +42,16 @@ export default async function DashboardLayout({
       .eq('workspace_id', workspace.id)
       .limit(1)
     hasGithub = !!(installations && installations.length > 0)
+    
+    if (hasGithub) {
+      const { data: repos } = await supabase
+        .from('repositories')
+        .select('*')
+        .eq('workspace_id', workspace.id)
+        .eq('status', 'selected')
+        .limit(1)
+      selectedRepo = repos?.[0]
+    }
   }
 
   return (
@@ -61,11 +73,23 @@ export default async function DashboardLayout({
           {hasGithub ? (
             <div className="space-y-2">
               <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Repositories</h2>
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 italic text-center">
-                  No repositories connected.
-                </p>
-              </div>
+              {selectedRepo ? (
+                <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm flex items-center space-x-3">
+                  <svg className="w-5 h-5 text-zinc-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" d="M3 3a2 2 0 012-2h9.982a2 2 0 011.414.586l4.018 4.018A2 2 0 0121 7.018V21a2 2 0 01-2 2H5a2 2 0 01-2-2V3zm2-.5a.5.5 0 00-.5.5v18a.5.5 0 00.5.5h14a.5.5 0 00.5-.5V7.5h-4a1 1 0 01-1-1V1.5H5z" clipRule="evenodd" />
+                  </svg>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">{selectedRepo.name}</p>
+                    <p className="text-xs text-zinc-500 truncate">{selectedRepo.owner}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 italic text-center">
+                    No repositories connected.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <ConnectGitHubButton

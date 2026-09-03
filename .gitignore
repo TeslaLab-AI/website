@@ -44,3 +44,8 @@ next-env.d.ts
 __pycache__/
 *.py[cod]
 *$py.class
+
+# next.js auto-generated files
+frontend/AGENTS.md
+frontend/CLAUDE.md
+
