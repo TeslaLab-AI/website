@@ -11,10 +11,12 @@ from fastapi import FastAPI
 
 from app.github_install import router as github_install_router
 from app.github_api import router as github_api_router
+from app.scan_api import router as scan_api_router
 
 app = FastAPI(title="TeslaLab API")
 app.include_router(github_install_router)
 app.include_router(github_api_router)
+app.include_router(scan_api_router)
 
 
 @app.get("/")

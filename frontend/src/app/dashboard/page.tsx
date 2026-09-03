@@ -1,13 +1,18 @@
 /**
  * Purpose:
- * Renders the dashboard workspace home, including GitHub connection empty state.
+ * Renders the primary dashboard view for the workspace.
  *
  * Responsibilities:
- * - Prompt the user to start GitHub App installation when no install exists.
+ * - Determine the user's workspace and GitHub installation state.
+ * - If no GitHub connection exists, prompt the user to connect.
+ * - If a connection exists but no repo is selected, render RepositorySelector.
+ * - If a repo is selected, render the RepositoryDashboard for scanning.
  */
 import { ConnectGitHubButton } from '@/components/github/ConnectGitHubButton'
 import { RepositorySelector } from '@/components/github/RepositorySelector'
 import { createClient } from '@/utils/supabase/server'
+
+import { RepositoryDashboard } from '@/components/github/RepositoryDashboard'
 
 export default async function DashboardPage({
   searchParams,
@@ -49,23 +54,9 @@ export default async function DashboardPage({
       </h2>
       
 
-
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-10 md:p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
         {selectedRepo ? (
-          <div className="w-full max-w-2xl mx-auto text-left">
-            <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-4">Connected Repository</h3>
-            <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl">
-              <div className="flex items-center space-x-3 mb-2">
-                <svg className="w-6 h-6 text-zinc-700 dark:text-zinc-300" fill="currentColor" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" d="M3 3a2 2 0 012-2h9.982a2 2 0 011.414.586l4.018 4.018A2 2 0 0121 7.018V21a2 2 0 01-2 2H5a2 2 0 01-2-2V3zm2-.5a.5.5 0 00-.5.5v18a.5.5 0 00.5.5h14a.5.5 0 00.5-.5V7.5h-4a1 1 0 01-1-1V1.5H5z" clipRule="evenodd" />
-                </svg>
-                <h4 className="text-lg font-medium text-zinc-900 dark:text-white">
-                  {selectedRepo.owner}/{selectedRepo.name}
-                </h4>
-              </div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Default branch: {selectedRepo.default_branch}</p>
-            </div>
-          </div>
+          <RepositoryDashboard repo={selectedRepo} />
         ) : hasGithub ? (
           <RepositorySelector />
         ) : (

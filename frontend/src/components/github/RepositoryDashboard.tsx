@@ -1,0 +1,360 @@
+/**
+ * Purpose:
+ * Renders the interactive repository dashboard for triggering scans and viewing results.
+ *
+ * Responsibilities:
+ * - Display the currently selected repository.
+ * - Trigger backend scans and poll the API for updates while a scan is in progress.
+ * - Provide a tabbed interface (Overview, Bugs, Dependencies, Security, Testing).
+ * - Render detailed findings with severity color-coding.
+ */
+
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
+
+interface Repo {
+  id: string
+  name: string
+  owner: string
+  default_branch: string
+}
+
+interface Scan {
+  id: string
+  status: 'in_progress' | 'completed' | 'failed'
+  started_at: string
+  completed_at: string | null
+}
+
+interface Finding {
+  id: string
+  category: 'bugs' | 'dependencies' | 'security' | 'testing'
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  title: string
+  description: string
+  file_path: string
+  line_number: number
+}
+
+type TabType = 'overview' | 'bugs' | 'dependencies' | 'security' | 'testing'
+
+export function RepositoryDashboard({ repo }: { repo: Repo }) {
+  const [activeTab, setActiveTab] = useState<TabType>('overview')
+  const [scan, setScan] = useState<Scan | null>(null)
+  const [findings, setFindings] = useState<Finding[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isScanning, setIsScanning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const supabase = createClient()
+
+  const fetchLatestScan = async () => {
+    try {
+      // 1. Get the authenticated session token to pass to the backend
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      // 2. Fetch the most recent scan for this specific repository
+      const res = await fetch(`/api/github/scan/${repo.id}/latest`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        
+        // 3. Update the UI state with the fetched scan and its findings
+        setScan(data.scan)
+        setFindings(data.findings || [])
+        
+        // 4. If the scan is still running, ensure the scanning animation stays active
+        if (data.scan?.status === 'in_progress') {
+          setIsScanning(true)
+        } else {
+          setIsScanning(false)
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch scan", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // Initial fetch when the component mounts
+    fetchLatestScan()
+    
+    // Polling mechanism: If a scan is running, ping the backend every 3 seconds
+    // to check if it has finished, so we can update the UI automatically.
+    let interval: NodeJS.Timeout
+    if (isScanning) {
+      interval = setInterval(fetchLatestScan, 3000)
+    }
+    
+    // Cleanup the interval when the component unmounts or polling stops
+    return () => clearInterval(interval)
+  }, [repo.id, isScanning])
+
+  const startScan = async () => {
+    try {
+      // 1. Reset error states and trigger the scanning UI immediately
+      setError(null)
+      setIsScanning(true)
+      setActiveTab('overview')
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error("Not authenticated")
+
+      // 2. Call the backend to trigger the background scanning task
+      const res = await fetch(`/api/github/scan/start`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ repository_id: repo.id })
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to start scan")
+      }
+      
+      // 3. Kick off a manual fetch immediately to update the UI with the 'in_progress' scan record
+      fetchLatestScan()
+    } catch (err: any) {
+      setError(err.message)
+      setIsScanning(false)
+    }
+  }
+
+  const renderFindings = (category: string) => {
+    const categoryFindings = findings.filter(f => f.category === category)
+    
+    if (loading || isScanning) {
+      return (
+        <div className="flex items-center justify-center h-40">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-white"></div>
+        </div>
+      )
+    }
+    
+    if (categoryFindings.length === 0) {
+      return (
+        <div className="text-center py-10 text-zinc-500">
+          No {category} found.
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        {categoryFindings.map(finding => (
+          <div key={finding.id} className="p-4 bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-xl shadow-sm text-left">
+            <div className="flex justify-between items-start mb-2">
+              <h5 className="font-semibold text-zinc-900 dark:text-zinc-100">{finding.title}</h5>
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                finding.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                finding.severity === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                finding.severity === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              }`}>
+                {finding.severity.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-3">{finding.description}</p>
+            <div className="flex items-center space-x-2 text-xs font-mono text-zinc-500 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 rounded-lg">
+              <span>{finding.file_path}</span>
+              {finding.line_number && (
+                <>
+                  <span className="text-zinc-300 dark:text-zinc-700">:</span>
+                  <span className="text-blue-600 dark:text-blue-400">L{finding.line_number}</span>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const renderContent = () => {
+    if (activeTab === 'overview') {
+      return (
+        <div className="space-y-6 flex-1 text-left">
+          <div className="flex items-center justify-between py-4 border-b border-zinc-200 dark:border-zinc-700/50">
+            <span className="text-zinc-500 dark:text-zinc-400">Last Scan</span>
+            <span className="font-medium text-zinc-900 dark:text-zinc-300">
+              {scan ? new Date(scan.started_at).toLocaleString() : 'Never'}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between py-4 border-b border-zinc-200 dark:border-zinc-700/50">
+            <span className="text-zinc-500 dark:text-zinc-400">Repository</span>
+            <span className="font-medium text-zinc-900 dark:text-zinc-300">{repo.name}</span>
+          </div>
+          
+          <div className="flex items-center justify-between py-4 border-b border-zinc-200 dark:border-zinc-700/50">
+            <span className="text-zinc-500 dark:text-zinc-400">Branch</span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+              {repo.default_branch}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between py-4 border-b border-zinc-200 dark:border-zinc-700/50">
+            <span className="text-zinc-500 dark:text-zinc-400">Status</span>
+            <span className={`font-medium ${
+              isScanning ? 'text-blue-500 animate-pulse' : 
+              scan?.status === 'failed' ? 'text-red-500' :
+              scan?.status === 'completed' ? 'text-emerald-500' : 'text-zinc-500'
+            }`}>
+              {isScanning ? 'Scanning...' : scan ? scan.status : 'Ready'}
+            </span>
+          </div>
+          
+          {error && (
+            <div className="text-red-500 text-sm mt-4 p-3 bg-red-50 dark:bg-red-900/10 rounded-lg">
+              {error}
+            </div>
+          )}
+        </div>
+      )
+    }
+    
+    return (
+      <div className="h-full flex flex-col text-left">
+        <h4 className="text-xl font-semibold text-zinc-900 dark:text-white mb-6 capitalize">{activeTab} Findings</h4>
+        <div className="flex-1 overflow-y-auto pr-2">
+          {renderFindings(activeTab)}
+        </div>
+      </div>
+    )
+  }
+
+  const tabStyle = (tab: TabType, colorClass: string, activeClass: string) => {
+    const isActive = activeTab === tab
+    return `flex items-center space-x-3 w-full p-4 rounded-xl font-medium transition-all text-left border ${
+      isActive 
+        ? `${activeClass} shadow-sm` 
+        : `bg-zinc-50 dark:bg-zinc-800/20 text-zinc-600 dark:text-zinc-400 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800/40`
+    }`
+  }
+
+  return (
+    <div className="w-full max-w-5xl mx-auto text-left flex flex-col h-full min-h-[500px]">
+      {/* Header Area */}
+      <div className="flex items-center justify-between mb-8 pb-6 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center space-x-4 cursor-pointer" onClick={() => setActiveTab('overview')}>
+          <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl">
+            <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+              <path fillRule="evenodd" d="M3 3a2 2 0 012-2h9.982a2 2 0 011.414.586l4.018 4.018A2 2 0 0121 7.018V21a2 2 0 01-2 2H5a2 2 0 01-2-2V3zm2-.5a.5.5 0 00-.5.5v18a.5.5 0 00.5.5h14a.5.5 0 00.5-.5V7.5h-4a1 1 0 01-1-1V1.5H5z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              {repo.name}
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              {repo.owner}/{repo.name}
+            </p>
+          </div>
+        </div>
+        
+        <button 
+          onClick={startScan}
+          disabled={isScanning}
+          className="flex items-center space-x-2 px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-lg shadow-sm transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        >
+          {isScanning ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white dark:border-zinc-900"></div>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          <span>{isScanning ? 'SCANNING...' : 'SCAN'}</span>
+        </button>
+      </div>
+
+      {/* Dashboard Content */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1">
+        {/* Left Column: Navigation Buttons */}
+        <div className="md:col-span-4 flex flex-col space-y-3">
+          <button 
+            onClick={() => setActiveTab('overview')}
+            className={tabStyle('overview', '', 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-500/20')}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+            <span>Overview</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('bugs')}
+            className={tabStyle('bugs', '', 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-100 dark:border-red-500/20')}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <span>Bugs</span>
+            {!loading && findings.some(f => f.category === 'bugs') && (
+              <span className="ml-auto bg-red-100 text-red-600 dark:bg-red-900/30 text-xs py-0.5 px-2 rounded-full">
+                {findings.filter(f => f.category === 'bugs').length}
+              </span>
+            )}
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('dependencies')}
+            className={tabStyle('dependencies', '', 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-500/20')}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+            <span>Dependencies</span>
+            {!loading && findings.some(f => f.category === 'dependencies') && (
+              <span className="ml-auto bg-orange-100 text-orange-600 dark:bg-orange-900/30 text-xs py-0.5 px-2 rounded-full">
+                {findings.filter(f => f.category === 'dependencies').length}
+              </span>
+            )}
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('security')}
+            className={tabStyle('security', '', 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20')}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            <span>Security</span>
+            {!loading && findings.some(f => f.category === 'security') && (
+              <span className="ml-auto bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 text-xs py-0.5 px-2 rounded-full">
+                {findings.filter(f => f.category === 'security').length}
+              </span>
+            )}
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('testing')}
+            className={tabStyle('testing', '', 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-100 dark:border-purple-500/20')}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+            <span>Testing</span>
+            {!loading && findings.some(f => f.category === 'testing') && (
+              <span className="ml-auto bg-purple-100 text-purple-600 dark:bg-purple-900/30 text-xs py-0.5 px-2 rounded-full">
+                {findings.filter(f => f.category === 'testing').length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Right Column: Dynamic Content */}
+        <div className="md:col-span-8 bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl p-8">
+          {activeTab === 'overview' ? (
+            <>
+              <h4 className="text-xl font-semibold text-zinc-900 dark:text-white mb-6">Repository Overview</h4>
+              {renderContent()}
+            </>
+          ) : (
+            renderContent()
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

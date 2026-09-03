@@ -56,3 +56,7 @@ def github_app_private_key() -> str:
     # GitHub private keys typically have actual newlines or escaped \n in env vars
     key = _require("GITHUB_APP_PRIVATE_KEY")
     return key.replace("\\n", "\n")
+
+
+def frontend_url() -> str:
+    return os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")

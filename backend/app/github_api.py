@@ -91,6 +91,8 @@ def get_installation_token(installation_id: int) -> str:
         },
         method="POST"
     )
+    if status == 404:
+        raise HTTPException(status_code=404, detail="Installation not found on GitHub")
     if status != 201 or not isinstance(body, dict) or "token" not in body:
         raise HTTPException(status_code=500, detail="Failed to acquire GitHub installation token")
     return body["token"]
@@ -132,7 +134,21 @@ def get_available_repositories(authorization: str | None = Header(default=None))
     installation_id = installation["github_installation_id"]
 
     # Fetch available repos from GitHub
-    token = get_installation_token(installation_id)
+    try:
+        token = get_installation_token(installation_id)
+    except HTTPException as e:
+        if e.status_code == 404:
+            # Installation was uninstalled on GitHub's side. Delete it from our DB to reset the UI.
+            _json_request(
+                f"{supabase_url()}/rest/v1/github_installations?github_installation_id=eq.{installation_id}",
+                headers={
+                    "Authorization": f"Bearer {supabase_service_role_key()}",
+                    "apikey": supabase_service_role_key(),
+                },
+                method="DELETE"
+            )
+        raise e
+
     status, body = _json_request(
         "https://api.github.com/installation/repositories?per_page=100",
         headers={

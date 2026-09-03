@@ -7,6 +7,7 @@
  * - Allow the user to select one repository.
  * - Submit the selected repository to the backend.
  * - Refresh the page state upon successful selection.
+ * - Detect if the GitHub App was uninstalled (404 response) and automatically reload to prompt re-installation.
  */
 
 'use client'
@@ -36,33 +37,39 @@ export function RepositorySelector() {
       try {
         const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
-        
+
         if (!session?.access_token) {
           setError('Authentication required')
           setLoading(false)
           return
         }
 
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'
-        const res = await fetch(`${backendUrl}/api/github/repositories/available`, {
+        const res = await fetch(`/api/github/repositories/available`, {
           headers: {
             Authorization: `Bearer ${session.access_token}`
           }
         })
+
+        if (res.status === 404) {
+          // The backend detected the app was uninstalled on GitHub's side and cleaned up the DB.
+          // Refresh the page so the user sees the "Connect GitHub" button again.
+          window.location.reload()
+          return
+        }
         
         if (!res.ok) {
           throw new Error('Failed to fetch repositories')
         }
-        
+
         const data = await res.json()
         setRepos(data.repositories || [])
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+        setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
         setLoading(false)
       }
     }
-    
+
     loadRepos()
   }, [])
 
@@ -71,9 +78,8 @@ export function RepositorySelector() {
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'
-      const res = await fetch(`${backendUrl}/api/github/repositories/select`, {
+
+      const res = await fetch(`/api/github/repositories/select`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,11 +92,11 @@ export function RepositorySelector() {
           default_branch: repo.default_branch
         })
       })
-      
+
       if (!res.ok) {
         throw new Error('Failed to select repository')
       }
-      
+
       // Refresh Next.js server components to reflect the selection
       router.refresh()
     } catch (err: unknown) {
