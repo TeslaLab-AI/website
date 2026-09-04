@@ -238,3 +238,28 @@ def select_repository(request: SelectRepoRequest, authorization: str | None = He
         raise HTTPException(status_code=500, detail="Failed to persist repository selection")
         
     return {"status": "success"}
+
+
+@router.delete("/api/github/repositories/{repository_id}")
+def remove_repository(repository_id: str, authorization: str | None = Header(default=None)):
+    """Removes a repository from the workspace, cascading deletion of associated scans and findings."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    access_token = authorization.split(" ", 1)[1].strip()
+
+    _ = _authenticated_user_id(access_token)
+    workspace_id = _workspace_id_for_user(access_token)
+
+    status, _ = _json_request(
+        f"{supabase_url()}/rest/v1/repositories?id=eq.{repository_id}&workspace_id=eq.{workspace_id}",
+        headers={
+            "Authorization": f"Bearer {supabase_service_role_key()}",
+            "apikey": supabase_service_role_key(),
+        },
+        method="DELETE"
+    )
+    if status not in (200, 204):
+        raise HTTPException(status_code=500, detail="Failed to remove repository")
+
+    return {"status": "success", "message": "Repository removed"}
+
