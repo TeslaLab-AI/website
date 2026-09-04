@@ -68,7 +68,23 @@ def chunk_file_content(file_path: str, max_tokens: int = 1500) -> list[dict]:
     except UnicodeDecodeError:
         return [] # Skip binary or weirdly encoded files
         
-    # Naive chunking (character based) for Phase 1
+    ext = Path(file_path).suffix
+    
+    # Try AST chunking first for supported languages
+    from app.ingestion.ast_parser import parse_file_ast
+    ast_chunks = parse_file_ast(content, ext)
+    
+    if ast_chunks:
+        print(f"AST Parser: Extracted {len(ast_chunks)} semantic chunks from {Path(file_path).name}")
+        chunks = []
+        for chunk_text in ast_chunks:
+            chunks.append({
+                "content": chunk_text,
+                "language": ext.lstrip('.')
+            })
+        return chunks
+        
+    # Fallback naive chunking (character based) for Phase 1 or unsupported languages
     # ~4 chars per token, so 1500 tokens = ~6000 chars
     CHUNK_SIZE = 6000
     OVERLAP = 500

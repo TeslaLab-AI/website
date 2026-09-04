@@ -28,7 +28,6 @@ from app.ingestion.github_downloader import download_and_extract_repo
 from app.ingestion.file_discovery import discover_files, chunk_file_content
 from app.ingestion.embeddings import generate_embeddings
 from app.analysis.semgrep_runner import run_semgrep
-from app.analysis.dependency_analyzer import analyze_dependencies
 
 router = APIRouter()
 
@@ -135,14 +134,9 @@ def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str, owner
                     }
                 )
                 
-        # Phase 2: Static & Dependency Analysis
-        update_progress(scan_id, "analyzing", 75, "Running static code analysis (Semgrep)...")
-        semgrep_findings = run_semgrep(repo_root)
-        
-        update_progress(scan_id, "analyzing", 85, "Running dependency vulnerability analysis...")
-        dependency_findings = analyze_dependencies(repo_root)
-        
-        all_findings = semgrep_findings + dependency_findings
+        # Phase 2: Static & Dependency Analysis (all via Semgrep)
+        update_progress(scan_id, "analyzing", 75, "Running static code & dependency analysis (Semgrep)...")
+        all_findings = run_semgrep(repo_root)
         
         # Ensure we always have at least one finding to show the scan completed
         if not all_findings:

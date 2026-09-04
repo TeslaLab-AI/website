@@ -19,9 +19,18 @@ def run_semgrep(target_dir: str) -> List[Dict[str, Any]]:
     """
     print(f"Running Semgrep on {target_dir}...")
     
-    # We use explicit comprehensive rule packs instead of 'auto' to ensure 
-    # we catch all expected security vulnerabilities and standard bugs.
-    cmd = ["semgrep", "scan", "--config", "p/default", "--config", "p/security-audit", "--json", target_dir]
+    # Comprehensive rule packs:
+    # - p/default: standard bugs and code quality
+    # - p/security-audit: security vulnerabilities (OWASP, CWE)
+    # - p/supply-chain: dependency and package vulnerabilities (CVEs)
+    cmd = [
+        "semgrep", "scan",
+        "--config", "p/default",
+        "--config", "p/security-audit",
+        "--config", "p/supply-chain",
+        "--json",
+        target_dir
+    ]
     
     try:
         # Use shell=True on Windows if semgrep is a .cmd/.exe wrapper in the Scripts folder
@@ -55,15 +64,22 @@ def run_semgrep(target_dir: str) -> List[Dict[str, Any]]:
             
             # Map Semgrep severity to our schema ('critical', 'high', 'medium', 'low')
             severity = "medium"
-            if severity_str == "ERROR":
+            if severity_str in ("CRITICAL",):
+                severity = "critical"
+            elif severity_str == "ERROR":
                 severity = "high"
             elif severity_str == "INFO":
                 severity = "low"
                 
-            # Classify category based on Semgrep rule type/metadata
+            # Classify category based on rule metadata
+            # supply-chain rules use 'supply-chain' category, map those to 'dependencies'
             category = "bugs"
             metadata = extra.get("metadata", {})
-            if "security" in metadata.get("category", "").lower() or "cwe" in metadata:
+            rule_category = metadata.get("category", "").lower()
+            rule_id = result.get("check_id", "").lower()
+            if "supply-chain" in rule_id or "supply-chain" in rule_category:
+                category = "dependencies"
+            elif "security" in rule_category or "cwe" in metadata:
                 category = "security"
                 
             file_path = result.get("path", "")
