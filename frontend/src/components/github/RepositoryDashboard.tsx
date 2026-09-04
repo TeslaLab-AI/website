@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
+import { ScanProgressHUD } from './ScanProgressHUD'
 
 interface Repo {
   id: string
@@ -47,9 +47,41 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
   const [findings, setFindings] = useState<Finding[]>([])
   const [loading, setLoading] = useState(true)
   const [isScanning, setIsScanning] = useState(false)
+  const [isRemoving, setIsRemoving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
   const supabase = createClient()
+
+  const handleRemoveRepo = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to remove "${repo.name}"? This will delete all scan history and findings for this repository.`
+    )
+    if (!confirmed) return
+
+    try {
+      setIsRemoving(true)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error("Authentication required")
+      }
+
+      const res = await fetch(`/api/github/repositories/${repo.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || "Failed to remove repository")
+      }
+
+      window.location.href = '/dashboard'
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "An error occurred while removing repository")
+      setIsRemoving(false)
+    }
+  }
 
   const fetchLatestScan = async () => {
     try {
@@ -86,16 +118,10 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
     // Initial fetch when the component mounts
     fetchLatestScan()
     
-    // Polling mechanism: If a scan is running, ping the backend every 3 seconds
-    // to check if it has finished, so we can update the UI automatically.
-    let interval: NodeJS.Timeout
-    if (isScanning) {
-      interval = setInterval(fetchLatestScan, 3000)
-    }
-    
-    // Cleanup the interval when the component unmounts or polling stops
-    return () => clearInterval(interval)
-  }, [repo.id, isScanning])
+    // Notice: We removed the Dashboard-level polling interval here.
+    // The high-end ScanProgressHUD component handles its own real-time polling 
+    // at a much faster rate (500ms) to ensure smooth animations.
+  }, [repo.id])
 
   const startScan = async () => {
     try {
@@ -212,6 +238,20 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
               {isScanning ? 'Scanning...' : scan ? scan.status : 'Ready'}
             </span>
           </div>
+
+          <div className="flex items-center justify-between py-4 border-b border-zinc-200 dark:border-zinc-700/50">
+            <div>
+              <span className="text-zinc-700 dark:text-zinc-300 font-medium block">Remove Repository</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Disconnect this repository and delete all its scan data</span>
+            </div>
+            <button
+              onClick={handleRemoveRepo}
+              disabled={isRemoving || isScanning}
+              className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900/50 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {isRemoving ? 'Removing...' : 'Remove Repository'}
+            </button>
+          </div>
           
           {error && (
             <div className="text-red-500 text-sm mt-4 p-3 bg-red-50 dark:bg-red-900/10 rounded-lg">
@@ -261,26 +301,55 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
           </div>
         </div>
         
-        <button 
-          onClick={startScan}
-          disabled={isScanning}
-          className="flex items-center space-x-2 px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-lg shadow-sm transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-        >
-          {isScanning ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white dark:border-zinc-900"></div>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          )}
-          <span>{isScanning ? 'SCANNING...' : 'SCAN'}</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={handleRemoveRepo}
+            disabled={isRemoving || isScanning}
+            className="flex items-center space-x-1.5 px-3.5 py-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-900/40 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Remove repository from workspace"
+          >
+            {isRemoving ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 dark:border-red-400"></div>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            )}
+            <span>{isRemoving ? 'Removing...' : 'Remove'}</span>
+          </button>
+
+          <button 
+            onClick={startScan}
+            disabled={isScanning || isRemoving}
+            className="flex items-center space-x-2 px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-lg shadow-sm transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {isScanning ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white dark:border-zinc-900"></div>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <span>{isScanning ? 'SCANNING...' : 'SCAN'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Dashboard Content */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1">
-        {/* Left Column: Navigation Buttons */}
+      {isScanning && scan?.id ? (
+        <div className="flex-1 w-full animate-in fade-in zoom-in duration-500 fill-mode-both">
+          <ScanProgressHUD 
+            scanId={scan.id} 
+            onComplete={() => {
+              setIsScanning(false)
+              fetchLatestScan()
+            }} 
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1">
+          {/* Left Column: Navigation Buttons */}
         <div className="md:col-span-4 flex flex-col space-y-3">
           <button 
             onClick={() => setActiveTab('overview')}
@@ -355,6 +424,7 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

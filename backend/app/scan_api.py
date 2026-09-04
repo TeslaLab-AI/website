@@ -15,6 +15,7 @@ import asyncio
 import uuid
 import random
 import json
+from datetime import datetime
 from typing import List, Dict, Any
 
 from fastapi import APIRouter, Header, HTTPException, BackgroundTasks
@@ -31,8 +32,40 @@ from app.analysis.dependency_analyzer import analyze_dependencies
 
 router = APIRouter()
 
+# Global dict to track live scan progress
+# scan_progress_state[scan_id] = {
+#     "phase": "initializing", # initializing, ingesting, analyzing, finalizing, completed, failed
+#     "progress": 0, # 0-100
+#     "logs": [{"timestamp": "...", "message": "..."}],
+# }
+scan_progress_state: Dict[str, Any] = {}
 
-async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str, owner: str, repo: str, branch: str, token: str):
+def update_progress(scan_id: str, phase: str, progress: int, message: str):
+    """Helper to update the in-memory scan progress and keep a rolling log of messages."""
+    if scan_id not in scan_progress_state:
+        scan_progress_state[scan_id] = {
+            "phase": "initializing",
+            "progress": 0,
+            "logs": []
+        }
+    
+    state = scan_progress_state[scan_id]
+    state["phase"] = phase
+    state["progress"] = progress
+    
+    # Add new log entry
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    state["logs"].append({"timestamp": timestamp, "message": message})
+    
+    # Keep only the last 100 logs to prevent memory bloat
+    if len(state["logs"]) > 100:
+        state["logs"] = state["logs"][-100:]
+    
+    # Also print to stdout for backend visibility
+    print(f"[Scan {scan_id[:8]}] {message}")
+
+
+def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str, owner: str, repo: str, branch: str, token: str):
     """
     Real ingestion pipeline:
     1. Download repo tarball
@@ -48,9 +81,13 @@ async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str,
     
     try:
         # Phase 1: Ingestion
+        update_progress(scan_id, "ingesting", 10, f"Downloading repository tarball for {owner}/{repo} @ {branch}...")
         repo_root = download_and_extract_repo(owner, repo, token, branch)
+        
+        update_progress(scan_id, "ingesting", 20, "Discovering source code files...")
         files = discover_files(repo_root)
         
+        update_progress(scan_id, "ingesting", 30, f"Found {len(files)} files. Chunking content...")
         all_chunks = []
         for f in files:
             chunks = chunk_file_content(f)
@@ -59,15 +96,15 @@ async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str,
                 c["file_path"] = f.replace(repo_root, "").lstrip("/\\")
             all_chunks.extend(chunks)
             
-        print(f"Discovered {len(files)} files, produced {len(all_chunks)} chunks.")
+        update_progress(scan_id, "ingesting", 40, f"Discovered {len(files)} files, produced {len(all_chunks)} chunks.")
         
-        # Phase 3: Embeddings & Storage
+        # Phase 3: Embeddings & Storage (renaming to Analyzing phase for UI simplicity)
         if all_chunks:
             texts = [c["content"] for c in all_chunks]
-            print("Generating embeddings...")
+            update_progress(scan_id, "analyzing", 50, "Generating AI embeddings for code chunks...")
             embeddings = generate_embeddings(texts)
             
-            print("Saving to database...")
+            update_progress(scan_id, "analyzing", 60, "Saving snapshot and chunks to vector database...")
             # 1. Create snapshot
             # For this simple implementation, we just use the branch name as the commit_sha placeholder
             # A more advanced version would use the GitHub API to get the latest commit SHA for the branch.
@@ -99,8 +136,10 @@ async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str,
                 )
                 
         # Phase 2: Static & Dependency Analysis
-        print("Running Static & Dependency Analysis...")
+        update_progress(scan_id, "analyzing", 75, "Running static code analysis (Semgrep)...")
         semgrep_findings = run_semgrep(repo_root)
+        
+        update_progress(scan_id, "analyzing", 85, "Running dependency vulnerability analysis...")
         dependency_findings = analyze_dependencies(repo_root)
         
         all_findings = semgrep_findings + dependency_findings
@@ -111,7 +150,7 @@ async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str,
                 {"category": "testing", "severity": "low", "title": "Scan Completed", "description": f"Successfully ingested {len(files)} files and found 0 critical issues.", "file_path": "N/A", "line_number": 0},
             ]
             
-        print(f"Generated {len(all_findings)} total findings.")
+        update_progress(scan_id, "finalizing", 95, f"Generated {len(all_findings)} total findings. Persisting to database...")
             
         for finding in all_findings:
             payload = {
@@ -126,6 +165,7 @@ async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str,
             _json_post(f"{supabase_url()}/rest/v1/scan_findings", headers, payload)
 
         # Mark scan as completed
+        update_progress(scan_id, "completed", 100, "Scan completed successfully.")
         patch_headers = {**headers, "Content-Type": "application/json"}
         _json_request(
             f"{supabase_url()}/rest/v1/scans?id=eq.{scan_id}",
@@ -135,7 +175,8 @@ async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str,
         )
         
     except Exception as e:
-        print(f"Error during scan: {e}")
+        error_msg = str(e)
+        update_progress(scan_id, "failed", 100, f"Error during scan: {error_msg}")
         patch_headers = {**headers, "Content-Type": "application/json"}
         _json_request(
             f"{supabase_url()}/rest/v1/scans?id=eq.{scan_id}",
@@ -206,6 +247,8 @@ def start_scan(request: StartScanRequest, background_tasks: BackgroundTasks, aut
         raise HTTPException(status_code=500, detail="Failed to create scan record")
 
     # 8. Dispatch the heavy analysis work to a background task so we can return a response immediately
+    # Initialize the progress state immediately before returning
+    update_progress(scan_id, "initializing", 5, f"Initializing scan for {owner}/{name} on branch {branch}...")
     background_tasks.add_task(perform_real_scan, scan_id, request.repository_id, workspace_id, owner, name, branch, token)
 
     # 9. Return the scan ID so the frontend can start polling for updates
@@ -254,3 +297,19 @@ def get_latest_scan(repository_id: str, authorization: str | None = Header(defau
         "scan": latest_scan,
         "findings": findings
     }
+
+
+@router.get("/api/github/scan/{scan_id}/progress")
+def get_scan_progress(scan_id: str, authorization: str | None = Header(default=None)):
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    if scan_id not in scan_progress_state:
+        # Wait a moment for initialization or it might be a stale request
+        return {
+            "phase": "unknown",
+            "progress": 0,
+            "logs": [{"timestamp": datetime.utcnow().isoformat() + "Z", "message": "Waiting for scan to initialize or scan not found in current session..."}]
+        }
+        
+    return scan_progress_state[scan_id]
