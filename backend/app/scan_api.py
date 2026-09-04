@@ -21,66 +21,128 @@ from fastapi import APIRouter, Header, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
 from app.config import supabase_url, supabase_service_role_key
-from app.github_api import _json_post, _json_request
+from app.github_api import _json_post, _json_request, get_workspace_installation, get_installation_token
 from app.github_install import _authenticated_user_id, _workspace_id_for_user
+from app.ingestion.github_downloader import download_and_extract_repo
+from app.ingestion.file_discovery import discover_files, chunk_file_content
+from app.ingestion.embeddings import generate_embeddings
+from app.analysis.semgrep_runner import run_semgrep
+from app.analysis.dependency_analyzer import analyze_dependencies
 
 router = APIRouter()
 
 
-async def perform_simulated_scan(scan_id: str):
+async def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str, owner: str, repo: str, branch: str, token: str):
     """
-    Simulates a repository scan by waiting for a short duration and then inserting
-    mock findings across all categories.
+    Real ingestion pipeline:
+    1. Download repo tarball
+    2. Discover files (respecting .gitignore)
+    3. Chunk files
+    4. Generate embeddings for chunks
+    5. Save to pgvector
     """
-    await asyncio.sleep(3)  # Simulate processing time
-    
-    findings = [
-        # Bugs
-        {"category": "bugs", "severity": "high", "title": "Null pointer exception possible", "description": "Variable 'user' may be null when accessing 'user.id'.", "file_path": "src/controllers/userController.ts", "line_number": 42},
-        {"category": "bugs", "severity": "medium", "title": "Memory leak in event listener", "description": "Event listener on 'scroll' is not removed on component unmount.", "file_path": "src/components/Header.tsx", "line_number": 115},
-        
-        # Dependencies
-        {"category": "dependencies", "severity": "critical", "title": "Outdated version of lodash", "description": "Lodash v4.17.15 has a known prototype pollution vulnerability. Upgrade to ^4.17.21.", "file_path": "package.json", "line_number": 23},
-        {"category": "dependencies", "severity": "low", "title": "Unused dependency 'moment'", "description": "Package 'moment' is installed but not imported anywhere.", "file_path": "package.json", "line_number": 25},
-        
-        # Security
-        {"category": "security", "severity": "critical", "title": "Hardcoded JWT secret", "description": "A hardcoded secret key was found in the configuration file.", "file_path": "backend/config/default.json", "line_number": 8},
-        {"category": "security", "severity": "high", "title": "SQL Injection vulnerability", "description": "Raw SQL query uses string concatenation instead of parameterized queries.", "file_path": "backend/services/db.js", "line_number": 56},
-        
-        # Testing
-        {"category": "testing", "severity": "medium", "title": "Missing unit tests for authentication", "description": "The AuthService class has 0% test coverage.", "file_path": "src/services/AuthService.ts", "line_number": 1},
-        {"category": "testing", "severity": "low", "title": "Flaky test in e2e suite", "description": "The login test frequently fails due to missing await on DOM element resolution.", "file_path": "tests/e2e/login.spec.ts", "line_number": 18},
-    ]
-
-    # Insert findings
     headers = {
         "Authorization": f"Bearer {supabase_service_role_key()}",
         "apikey": supabase_service_role_key(),
     }
     
-    for finding in findings:
-        payload = {
-            "scan_id": scan_id,
-            "category": finding["category"],
-            "severity": finding["severity"],
-            "title": finding["title"],
-            "description": finding["description"],
-            "file_path": finding["file_path"],
-            "line_number": finding["line_number"]
-        }
-        _json_post(f"{supabase_url()}/rest/v1/scan_findings", headers, payload)
+    try:
+        # Phase 1: Ingestion
+        repo_root = download_and_extract_repo(owner, repo, token, branch)
+        files = discover_files(repo_root)
         
-    # Mark scan as completed
-    patch_headers = {
-        **headers,
-        "Content-Type": "application/json"
-    }
-    _json_request(
-        f"{supabase_url()}/rest/v1/scans?id=eq.{scan_id}",
-        patch_headers,
-        method="PATCH",
-        data=json.dumps({"status": "completed", "completed_at": "now()"}).encode("utf-8")
-    )
+        all_chunks = []
+        for f in files:
+            chunks = chunk_file_content(f)
+            # Add file path to each chunk
+            for c in chunks:
+                c["file_path"] = f.replace(repo_root, "").lstrip("/\\")
+            all_chunks.extend(chunks)
+            
+        print(f"Discovered {len(files)} files, produced {len(all_chunks)} chunks.")
+        
+        # Phase 3: Embeddings & Storage
+        if all_chunks:
+            texts = [c["content"] for c in all_chunks]
+            print("Generating embeddings...")
+            embeddings = generate_embeddings(texts)
+            
+            print("Saving to database...")
+            # 1. Create snapshot
+            # For this simple implementation, we just use the branch name as the commit_sha placeholder
+            # A more advanced version would use the GitHub API to get the latest commit SHA for the branch.
+            commit_sha = f"{branch}-latest"
+            snapshot_id = str(uuid.uuid4())
+            _json_post(
+                f"{supabase_url()}/rest/v1/repository_snapshots?on_conflict=repository_id,commit_sha",
+                headers,
+                payload={
+                    "id": snapshot_id,
+                    "repository_id": repository_id,
+                    "workspace_id": workspace_id,
+                    "commit_sha": commit_sha
+                }
+            )
+            
+            # 2. Insert chunks
+            for chunk, emb in zip(all_chunks, embeddings):
+                _json_post(
+                    f"{supabase_url()}/rest/v1/code_chunks",
+                    headers,
+                    payload={
+                        "snapshot_id": snapshot_id,
+                        "file_path": chunk["file_path"],
+                        "content": chunk["content"],
+                        "language": chunk["language"],
+                        "embedding": emb
+                    }
+                )
+                
+        # Phase 2: Static & Dependency Analysis
+        print("Running Static & Dependency Analysis...")
+        semgrep_findings = run_semgrep(repo_root)
+        dependency_findings = analyze_dependencies(repo_root)
+        
+        all_findings = semgrep_findings + dependency_findings
+        
+        # Ensure we always have at least one finding to show the scan completed
+        if not all_findings:
+            all_findings = [
+                {"category": "testing", "severity": "low", "title": "Scan Completed", "description": f"Successfully ingested {len(files)} files and found 0 critical issues.", "file_path": "N/A", "line_number": 0},
+            ]
+            
+        print(f"Generated {len(all_findings)} total findings.")
+            
+        for finding in all_findings:
+            payload = {
+                "scan_id": scan_id,
+                "category": finding["category"],
+                "severity": finding["severity"],
+                "title": finding["title"],
+                "description": finding["description"],
+                "file_path": finding["file_path"],
+                "line_number": finding["line_number"]
+            }
+            _json_post(f"{supabase_url()}/rest/v1/scan_findings", headers, payload)
+
+        # Mark scan as completed
+        patch_headers = {**headers, "Content-Type": "application/json"}
+        _json_request(
+            f"{supabase_url()}/rest/v1/scans?id=eq.{scan_id}",
+            patch_headers,
+            method="PATCH",
+            data=json.dumps({"status": "completed", "completed_at": "now()"}).encode("utf-8")
+        )
+        
+    except Exception as e:
+        print(f"Error during scan: {e}")
+        patch_headers = {**headers, "Content-Type": "application/json"}
+        _json_request(
+            f"{supabase_url()}/rest/v1/scans?id=eq.{scan_id}",
+            patch_headers,
+            method="PATCH",
+            data=json.dumps({"status": "failed", "completed_at": "now()"}).encode("utf-8")
+        )
 
 
 class StartScanRequest(BaseModel):
@@ -108,11 +170,23 @@ def start_scan(request: StartScanRequest, background_tasks: BackgroundTasks, aut
     
     # 5. Security Check: Verify that the requested repository actually belongs to the user's workspace
     status, body = _json_request(
-        f"{supabase_url()}/rest/v1/repositories?id=eq.{request.repository_id}&workspace_id=eq.{workspace_id}&select=id",
+        f"{supabase_url()}/rest/v1/repositories?id=eq.{request.repository_id}&workspace_id=eq.{workspace_id}&select=*",
         headers
     )
     if status != 200 or not isinstance(body, list) or len(body) == 0:
         raise HTTPException(status_code=404, detail="Repository not found in workspace")
+        
+    repo = body[0]
+    owner = repo["owner"]
+    name = repo["name"]
+    branch = repo["default_branch"]
+    
+    # 5b. Get installation token
+    installation = get_workspace_installation(workspace_id)
+    if not installation:
+        raise HTTPException(status_code=400, detail="No GitHub installation found")
+        
+    token = get_installation_token(installation["github_installation_id"])
 
     # 6. Generate a unique ID for this new scan
     scan_id = str(uuid.uuid4())
@@ -132,7 +206,7 @@ def start_scan(request: StartScanRequest, background_tasks: BackgroundTasks, aut
         raise HTTPException(status_code=500, detail="Failed to create scan record")
 
     # 8. Dispatch the heavy analysis work to a background task so we can return a response immediately
-    background_tasks.add_task(perform_simulated_scan, scan_id)
+    background_tasks.add_task(perform_real_scan, scan_id, request.repository_id, workspace_id, owner, name, branch, token)
 
     # 9. Return the scan ID so the frontend can start polling for updates
     return {"status": "success", "scan_id": scan_id}

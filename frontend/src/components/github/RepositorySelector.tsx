@@ -15,6 +15,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { ConnectGitHubButton } from '@/components/github/ConnectGitHubButton'
 
 type Repository = {
   id: number
@@ -97,8 +98,8 @@ export function RepositorySelector() {
         throw new Error('Failed to select repository')
       }
 
-      // Refresh Next.js server components to reflect the selection
-      router.refresh()
+      // Navigate back to the dashboard to clear the ?action=add_repo query param
+      router.push('/dashboard')
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to select repository')
       setSelecting(null)
@@ -153,6 +154,15 @@ export function RepositorySelector() {
             </button>
           </div>
         ))}
+      </div>
+      <div className="text-center pt-4">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+          Don't see your repository? You may need to grant access.
+        </p>
+        <ConnectGitHubButton
+          label="Configure GitHub Permissions"
+          className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+        />
       </div>
     </div>
   )

@@ -3,3 +3,8 @@ uvicorn[standard]
 python-dotenv
 PyJWT
 cryptography
+pathspec
+openai
+tenacity
+httpx
+semgrep

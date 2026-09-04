@@ -11,22 +11,24 @@
 import { ConnectGitHubButton } from '@/components/github/ConnectGitHubButton'
 import { RepositorySelector } from '@/components/github/RepositorySelector'
 import { createClient } from '@/utils/supabase/server'
-
+import Link from 'next/link'
 import { RepositoryDashboard } from '@/components/github/RepositoryDashboard'
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ connect_error?: string }>
+  searchParams: Promise<{ connect_error?: string, action?: string, repo_id?: string }>
 }) {
   const params = await searchParams
+  const isAddingRepo = params.action === 'add_repo'
 
   const supabase = await createClient()
   const { data: workspaces } = await supabase.from('workspaces').select('*').limit(1)
   const workspace = workspaces?.[0]
   
   let hasGithub = false
-  let selectedRepo = null
+  let selectedRepos: any[] = []
+  let activeRepo = null
   
   if (workspace) {
     const { data: installations } = await supabase
@@ -42,23 +44,67 @@ export default async function DashboardPage({
         .select('*')
         .eq('workspace_id', workspace.id)
         .eq('status', 'selected')
-        .limit(1)
-      selectedRepo = repos?.[0]
+      
+      selectedRepos = repos || []
+      
+      if (params.repo_id) {
+        activeRepo = selectedRepos.find(r => r.id === params.repo_id)
+      } 
+      if (!activeRepo && selectedRepos.length > 0) {
+        activeRepo = selectedRepos[0]
+      }
     }
   }
 
   return (
     <div className="p-6 md:p-10 w-full max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-8">
-        Repository Scan
-      </h2>
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
+          Repository Scan
+        </h2>
+        
+        {selectedRepos.length > 0 && !isAddingRepo && (
+          <Link 
+            href="?action=add_repo"
+            className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-lg text-sm font-medium transition-colors"
+          >
+            + Add Repository
+          </Link>
+        )}
+      </div>
       
+      {selectedRepos.length > 1 && !isAddingRepo && (
+        <div className="flex overflow-x-auto space-x-2 mb-6 pb-2">
+          {selectedRepos.map(repo => (
+            <Link 
+              key={repo.id}
+              href={`?repo_id=${repo.id}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                activeRepo?.id === repo.id 
+                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm' 
+                  : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-700'
+              }`}
+            >
+              {repo.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-10 md:p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
-        {selectedRepo ? (
-          <RepositoryDashboard repo={selectedRepo} />
-        ) : hasGithub ? (
-          <RepositorySelector />
+      <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 ${activeRepo && !isAddingRepo ? 'p-0 border-none shadow-none bg-transparent dark:bg-transparent' : 'p-10 md:p-16 text-center flex flex-col items-center justify-center min-h-[400px]'}`}>
+        {isAddingRepo || (!activeRepo && hasGithub) ? (
+          <div className="w-full">
+            {isAddingRepo && selectedRepos.length > 0 && (
+              <div className="flex justify-start mb-6">
+                <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center">
+                  ← Back to Dashboard
+                </Link>
+              </div>
+            )}
+            <RepositorySelector />
+          </div>
+        ) : activeRepo ? (
+          <RepositoryDashboard repo={activeRepo} />
         ) : (
           <>
             <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-5">
