@@ -80,22 +80,59 @@ def verify_installation(installation_id: int) -> bool:
     return status == 200
 
 
-def get_installation_token(installation_id: int) -> str:
-    """Fetches an installation access token."""
+def get_installation_token(installation_id: int, permissions: dict | None = None) -> str:
+    """Fetches an installation access token, optionally requesting specific permissions."""
     app_jwt = get_github_jwt()
-    status, body = _json_request(
+    
+    body_payload = {}
+    if permissions:
+        body_payload["permissions"] = permissions
+    
+    import json as _json
+    data = _json.dumps(body_payload).encode("utf-8") if body_payload else None
+    
+    req_headers = {
+        "Authorization": f"Bearer {app_jwt}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    if data:
+        req_headers["Content-Type"] = "application/json"
+    
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError
+    request = Request(
         f"https://api.github.com/app/installations/{installation_id}/access_tokens",
-        headers={
-            "Authorization": f"Bearer {app_jwt}",
-            "Accept": "application/vnd.github.v3+json"
-        },
-        method="POST"
+        headers=req_headers,
+        method="POST",
+        data=data
     )
-    if status == 404:
-        raise HTTPException(status_code=404, detail="Installation not found on GitHub")
-    if status != 201 or not isinstance(body, dict) or "token" not in body:
-        raise HTTPException(status_code=500, detail="Failed to acquire GitHub installation token")
-    return body["token"]
+    try:
+        with urlopen(request, timeout=10) as response:
+            resp_body = response.read().decode("utf-8")
+            parsed = _json.loads(resp_body)
+            print(f"[GitHub Token] Granted permissions: {parsed.get('permissions', {})}")
+            if "token" not in parsed:
+                raise HTTPException(status_code=500, detail="Failed to acquire GitHub installation token")
+            return parsed["token"]
+    except HTTPError as e:
+        err_text = ""
+        try:
+            err_text = e.read().decode("utf-8")
+        except Exception:
+            pass
+        print(f"[GitHub Token Error {e.code}]: {err_text}")
+
+        # If requesting specific permissions returned 422 (not granted), fallback to all granted permissions
+        if e.code == 422 and permissions:
+            print("[GitHub Token] Falling back to default installation permissions without restriction...")
+            return get_installation_token(installation_id, permissions=None)
+
+        if e.code == 404:
+            raise HTTPException(status_code=404, detail="Installation not found on GitHub")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to acquire GitHub installation token: {e.code} {err_text}"
+        )
 
 
 def get_workspace_installation(workspace_id: str) -> dict | None:
@@ -238,3 +275,28 @@ def select_repository(request: SelectRepoRequest, authorization: str | None = He
         raise HTTPException(status_code=500, detail="Failed to persist repository selection")
         
     return {"status": "success"}
+
+
+@router.delete("/api/github/repositories/{repository_id}")
+def remove_repository(repository_id: str, authorization: str | None = Header(default=None)):
+    """Removes a repository from the workspace, cascading deletion of associated scans and findings."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    access_token = authorization.split(" ", 1)[1].strip()
+
+    _ = _authenticated_user_id(access_token)
+    workspace_id = _workspace_id_for_user(access_token)
+
+    status, _ = _json_request(
+        f"{supabase_url()}/rest/v1/repositories?id=eq.{repository_id}&workspace_id=eq.{workspace_id}",
+        headers={
+            "Authorization": f"Bearer {supabase_service_role_key()}",
+            "apikey": supabase_service_role_key(),
+        },
+        method="DELETE"
+    )
+    if status not in (200, 204):
+        raise HTTPException(status_code=500, detail="Failed to remove repository")
+
+    return {"status": "success", "message": "Repository removed"}
+
