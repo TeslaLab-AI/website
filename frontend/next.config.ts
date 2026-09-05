@@ -28,12 +28,12 @@ const nextConfig: NextConfig = {
           ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/github/chat`
           : "http://127.0.0.1:8000/api/github/chat",
       },
-      // 4. Proxy the fix generator
+      // 4. Proxy the fix generator (simple + agentic pipeline)
       {
-        source: "/api/github/fix",
+        source: "/api/github/fix/:path*",
         destination: process.env.NEXT_PUBLIC_BACKEND_URL
-          ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/github/fix`
-          : "http://127.0.0.1:8000/api/github/fix",
+          ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/github/fix/:path*`
+          : "http://127.0.0.1:8000/api/github/fix/:path*",
       },
     ];
   },

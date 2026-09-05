@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 import openai
 import base64
@@ -8,6 +8,8 @@ import json
 from app.config import supabase_url, supabase_service_role_key
 from app.github_api import _json_request, _json_post, get_workspace_installation, get_installation_token
 from app.github_install import _workspace_id_for_user
+from app.agents import event_bus
+from app.agents.pipeline import run_pipeline
 
 router = APIRouter()
 client = openai.OpenAI()
@@ -84,7 +86,7 @@ def generate_pr_fix(request: FixRequest, authorization: str | None = Header(defa
     finding = f_body[0]
     file_path = finding["file_path"]
 
-    # 4. Get GitHub Installation Token
+    # 4. Get GitHub Installation Token with explicit write permissions for fix operations
     installation = get_workspace_installation(workspace_id)
     if not installation:
         raise HTTPException(status_code=400, detail="No GitHub installation found")
@@ -193,10 +195,11 @@ Original File Content ({file_path}):
         )
 
         if p_status == 403:
+            compare_url = f"https://github.com/{owner}/{name}/compare/{default_branch}...{branch_name}?expand=1"
             github_msg = p_body.get("message", "Resource not accessible by integration")
             raise HTTPException(
                 status_code=403,
-                detail=f"GitHub denied PR creation (403): {github_msg}. Ensure 'Pull requests: Read and write' is accepted at https://github.com/settings/installations"
+                detail=f"Fix committed to branch '{branch_name}', but GitHub denied PR creation (403): {github_msg}. Open PR: {compare_url} or enable 'Pull requests: Read and write' in App settings."
             )
 
         # 422 means a PR already exists for this head/base — fetch it and return it
@@ -226,3 +229,69 @@ Original File Content ({file_path}):
         with open("fix_500.log", "w", encoding="utf-8") as f:
             f.write(traceback.format_exc())
         raise e
+
+
+# ─────────────────────────────────────────────────────────────
+# Agentic Fix Pipeline endpoints
+# ─────────────────────────────────────────────────────────────
+
+class AgenticFixRequest(BaseModel):
+    repository_id: str
+    finding_id: str
+
+
+@router.post("/api/github/fix/agentic")
+def start_agentic_fix(
+    request: AgenticFixRequest,
+    background_tasks: BackgroundTasks,
+    authorization: str | None = Header(default=None),
+):
+    """Start the multi-agent fix pipeline. Returns a run_id to poll for progress."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    access_token = authorization.split(" ", 1)[1].strip()
+    workspace_id = _workspace_id_for_user(access_token)
+
+    db_headers = {
+        "Authorization": f"Bearer {supabase_service_role_key()}",
+        "apikey": supabase_service_role_key(),
+    }
+
+    # Validate repository ownership
+    r_status, r_body = _json_request(
+        f"{supabase_url()}/rest/v1/repositories?id=eq.{request.repository_id}&workspace_id=eq.{workspace_id}",
+        db_headers,
+    )
+    if r_status != 200 or not r_body:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    repo = r_body[0]
+
+    # Validate finding exists
+    f_status, f_body = _json_request(
+        f"{supabase_url()}/rest/v1/scan_findings?id=eq.{request.finding_id}",
+        db_headers,
+    )
+    if f_status != 200 or not f_body:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    finding = f_body[0]
+
+    run_id = str(uuid.uuid4())
+    event_bus.init_run(run_id, request.finding_id, request.repository_id)
+
+    background_tasks.add_task(run_pipeline, run_id, finding, repo, workspace_id)
+
+    return {"run_id": run_id, "status": "started"}
+
+
+@router.get("/api/github/fix/agentic/{run_id}")
+def get_agentic_fix_status(run_id: str, authorization: str | None = Header(default=None)):
+    """Poll the current state of an agentic fix run."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    state = event_bus.get_run(run_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    return state

@@ -52,6 +52,15 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
   const [fixingId, setFixingId] = useState<string | null>(null)
   const [fixResults, setFixResults] = useState<Record<string, { pr_url: string, explanation: string } | { error: string }>>({})
   const [error, setError] = useState<string | null>(null)
+  // Agentic fix state: keyed by finding ID
+  const [agenticRuns, setAgenticRuns] = useState<Record<string, {
+    runId: string
+    status: 'running' | 'completed' | 'failed'
+    phase: string
+    logs: {timestamp: string, message: string}[]
+    result: any
+    error: string | null
+  }>>({})
   const supabase = createClient()
 
   const handleRemoveRepo = async () => {
@@ -158,6 +167,54 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
     }
   }
 
+  const handleAgenticFix = async (findingId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+
+      // Start the pipeline
+      const res = await fetch('/api/github/fix/agentic', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repository_id: repo.id, finding_id: findingId })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Failed to start agentic fix')
+      }
+      const { run_id } = await res.json()
+
+      // Initialize state
+      setAgenticRuns(prev => ({ ...prev, [findingId]: { runId: run_id, status: 'running', phase: 'initializing', logs: [], result: null, error: null } }))
+
+      // Poll for progress
+      const poll = async () => {
+        const pollRes = await fetch(`/api/github/fix/agentic/${run_id}`, {
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        })
+        if (!pollRes.ok) return
+        const state = await pollRes.json()
+        setAgenticRuns(prev => ({
+          ...prev,
+          [findingId]: {
+            runId: run_id,
+            status: state.status,
+            phase: state.phase,
+            logs: state.logs || [],
+            result: state.result,
+            error: state.error
+          }
+        }))
+        if (state.status === 'running') {
+          setTimeout(poll, 2000)  // poll every 2s while running
+        }
+      }
+      setTimeout(poll, 1000)
+    } catch (err: any) {
+      setAgenticRuns(prev => ({ ...prev, [findingId]: { runId: '', status: 'failed', phase: 'failed', logs: [], result: null, error: err.message } }))
+    }
+  }
+
   const handleGenerateFix = async (findingId: string) => {
     try {
       setFixingId(findingId)
@@ -189,10 +246,9 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
         [findingId]: data
       }))
     } catch (err: any) {
-      // Demo mode: show as fixed even on error
       setFixResults(prev => ({
         ...prev,
-        [findingId]: { pr_url: 'https://github.com', explanation: 'Fix applied successfully.' }
+        [findingId]: { error: err.message }
       }))
     } finally {
       setFixingId(null)
@@ -278,24 +334,74 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
                     className="text-xs text-red-600 underline"
                   >Retry</button>
                 </div>
-              ) : (
-                <button
-                  onClick={() => handleGenerateFix(finding.id)}
-                  disabled={fixingId === finding.id}
-                  className="flex items-center space-x-2 text-sm font-medium px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {fixingId === finding.id ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full" />
-                      <span>Writing Fix & PR...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>✨</span>
-                      <span>Generate PR Fix</span>
-                    </>
+              ) : agenticRuns[finding.id] ? (
+                /* Agentic Fix Progress Panel */
+                <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                  <div className="px-3 py-2 bg-zinc-50 dark:bg-zinc-800/60 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wide">
+                      🤖 Agentic Fix Pipeline
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      agenticRuns[finding.id].status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                      agenticRuns[finding.id].status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    }`}>
+                      {agenticRuns[finding.id].status === 'running' ? `⚙ ${agenticRuns[finding.id].phase}` :
+                       agenticRuns[finding.id].status === 'completed' ? '✅ Done' : '❌ Failed'}
+                    </span>
+                  </div>
+                  {/* Phase steps */}
+                  <div className="px-3 py-2 space-y-1 max-h-32 overflow-y-auto text-xs font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-950/5 dark:bg-zinc-900/40">
+                    {agenticRuns[finding.id].logs.slice(-8).map((log, i) => (
+                      <div key={i} className="leading-relaxed">{log.message}</div>
+                    ))}
+                    {agenticRuns[finding.id].status === 'running' && (
+                      <div className="flex items-center space-x-1 text-blue-500">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span>Processing...</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Result */}
+                  {agenticRuns[finding.id].status === 'completed' && agenticRuns[finding.id].result && (
+                    <div className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 border-t border-emerald-200 dark:border-emerald-800/30">
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mb-1">
+                        Tests: {agenticRuns[finding.id].result.test_result} · Verify: {agenticRuns[finding.id].result.verify_result} · Attempts: {agenticRuns[finding.id].result.attempts}
+                      </p>
+                      <a href={agenticRuns[finding.id].result.pr_url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-1 rounded transition-colors">
+                        <span>View PR on GitHub →</span>
+                      </a>
+                    </div>
                   )}
-                </button>
+                  {agenticRuns[finding.id].status === 'failed' && (
+                    <div className="px-3 py-2 bg-red-50 dark:bg-red-900/10 border-t border-red-200 dark:border-red-800/30">
+                      <p className="text-xs text-red-600 dark:text-red-400">{agenticRuns[finding.id].error}</p>
+                      <button onClick={() => setAgenticRuns(prev => { const n={...prev}; delete n[finding.id]; return n })}
+                        className="text-xs text-red-500 underline mt-1">Retry</button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleGenerateFix(finding.id)}
+                    disabled={fixingId === finding.id}
+                    className="flex items-center space-x-2 text-sm font-medium px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {fixingId === finding.id ? (
+                      <><div className="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full" /><span>Fixing...</span></>
+                    ) : (
+                      <><span>✨</span><span>Quick Fix</span></>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleAgenticFix(finding.id)}
+                    className="flex items-center space-x-2 text-sm font-medium px-3 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white rounded-lg transition-all shadow-sm"
+                  >
+                    <span>🤖</span><span>Agentic Fix</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
