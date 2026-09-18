@@ -30,7 +30,7 @@ export async function signupUser(email: string, password: string, fullName: stri
   })
 
   if (error) {
-    throw new Error(error.message)
+    return { error: error.message }
   }
 
   // Provisioning
@@ -40,12 +40,12 @@ export async function signupUser(email: string, password: string, fullName: stri
     // Prevent provisioning if Supabase returned a fake user (email already exists)
     const isFakeUser = data.user.identities && data.user.identities.length === 0
     if (isFakeUser) {
-      throw new Error('This email is already registered. Please log in.')
+      return { error: 'This email is already registered. Please log in.' }
     }
 
-    const adminClient = createAdminClient()
-
     try {
+      const adminClient = createAdminClient()
+      
       // 1. Insert Profile
       const { error: profileError } = await adminClient
         .from('profiles')
@@ -56,7 +56,7 @@ export async function signupUser(email: string, password: string, fullName: stri
       
       if (profileError) {
         console.error('Failed to provision profile:', profileError)
-        throw new Error('Account created, but profile provisioning failed.')
+        return { error: 'Account created, but profile provisioning failed.' }
       }
 
       // 2. Insert Workspace
@@ -71,7 +71,7 @@ export async function signupUser(email: string, password: string, fullName: stri
 
       if (workspaceError || !workspace) {
         console.error('Failed to provision workspace:', workspaceError)
-        throw new Error('Account created, but workspace provisioning failed.')
+        return { error: 'Account created, but workspace provisioning failed.' }
       }
 
       // 3. Insert Workspace Member
@@ -84,22 +84,18 @@ export async function signupUser(email: string, password: string, fullName: stri
 
       if (memberError) {
         console.error('Failed to assign user to workspace:', memberError)
-        throw new Error('Account created, but workspace assignment failed.')
+        return { error: 'Account created, but workspace assignment failed.' }
       }
 
     } catch (provisioningError: unknown) {
       // Log server-side to diagnose partial failures
       console.error('Provisioning failed for user', data.user.id, ':', provisioningError)
       // Propagate a generic safe error to the client
-      throw new Error(
-        provisioningError instanceof Error 
-          ? provisioningError.message 
-          : 'Failed to provision initial account data.'
-      )
+      return { error: provisioningError instanceof Error ? provisioningError.message : 'Failed to provision initial account data.' }
     }
   }
 
-  return data
+  return { data }
 }
 
 /**
