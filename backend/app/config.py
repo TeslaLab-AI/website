@@ -59,4 +59,9 @@ def github_app_private_key() -> str:
 
 
 def frontend_url() -> str:
-    return os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    url = os.environ.get("FRONTEND_URL")
+    if url:
+        return url.rstrip("/")
+    if os.environ.get("RENDER") == "true":
+        raise RuntimeError("FRONTEND_URL is not configured for production deployment on Render")
+    return "http://localhost:3000"

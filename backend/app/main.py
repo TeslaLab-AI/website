@@ -23,11 +23,11 @@ app.include_router(chat_api_router)
 app.include_router(fix_api_router)
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return {"status": "ok"}
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok", "message": "TeslaLab backend is healthy"}
