@@ -22,7 +22,9 @@ class FixResponse(BaseModel):
     pr_url: str
     explanation: str
 
-def _github_request(url: str, token: str, method: str = "GET", payload: dict | None = None) -> tuple[int, dict]:
+from typing import Any
+
+def _github_request(url: str, token: str, method: str = "GET", payload: dict | None = None) -> tuple[int, Any]:
     import urllib.request
     import urllib.error
     
@@ -45,12 +47,16 @@ def _github_request(url: str, token: str, method: str = "GET", payload: dict | N
     except urllib.error.HTTPError as error:
         try:
             body = error.read().decode("utf-8")
-            return error.code, json.loads(body) if body else {}
-        except:
-            return error.code, {}
+            return error.code, json.loads(body) if body else None
+        except Exception as e:
+            print(f"[_github_request] Failed to parse HTTPError body for {url.split('?')[0]}: {e}")
+            return error.code, None
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+        print(f"[_github_request] Network/JSON error for {url.split('?')[0]}: {e}")
+        return 503, None
     except Exception as e:
-        print(f"GitHub Request Error: {e}")
-        return 500, {}
+        print(f"[_github_request] Unexpected error for {url.split('?')[0]}: {e}")
+        return 500, None
 
 @router.post("/api/github/fix", response_model=FixResponse)
 def generate_pr_fix(request: FixRequest, authorization: str | None = Header(default=None)):
@@ -71,7 +77,7 @@ def generate_pr_fix(request: FixRequest, authorization: str | None = Header(defa
         f"{supabase_url()}/rest/v1/repositories?id=eq.{request.repository_id}&workspace_id=eq.{workspace_id}",
         db_headers
     )
-    if r_status != 200 or not r_body:
+    if r_status != 200 or not isinstance(r_body, list) or len(r_body) == 0 or not isinstance(r_body[0], dict):
         raise HTTPException(status_code=404, detail="Repository not found")
     repo = r_body[0]
     owner, name, default_branch = repo["owner"], repo["name"], repo["default_branch"]
@@ -81,7 +87,7 @@ def generate_pr_fix(request: FixRequest, authorization: str | None = Header(defa
         f"{supabase_url()}/rest/v1/scan_findings?id=eq.{request.finding_id}",
         db_headers
     )
-    if f_status != 200 or not f_body:
+    if f_status != 200 or not isinstance(f_body, list) or len(f_body) == 0 or not isinstance(f_body[0], dict):
         raise HTTPException(status_code=404, detail="Finding not found")
     finding = f_body[0]
     file_path = finding.get("file_path")
@@ -96,7 +102,7 @@ def generate_pr_fix(request: FixRequest, authorization: str | None = Header(defa
 
     # 5. Fetch File from GitHub
     c_status, c_body = _github_request(f"https://api.github.com/repos/{owner}/{name}/contents/{file_path}", token)
-    if c_status != 200 or "content" not in c_body:
+    if c_status != 200 or not isinstance(c_body, dict) or "content" not in c_body:
         raise HTTPException(status_code=404, detail=f"File {file_path} not found on GitHub")
     
     original_content = base64.b64decode(c_body["content"]).decode("utf-8")
@@ -152,8 +158,8 @@ Original File Content ({file_path}):
         
         # Get latest commit of default branch
         ref_status, ref_body = _github_request(f"https://api.github.com/repos/{owner}/{name}/git/ref/heads/{default_branch}", token)
-        if ref_status != 200:
-            raise HTTPException(status_code=500, detail=f"Failed to get default branch ref. Status: {ref_status}, Body: {ref_body}")
+        if ref_status != 200 or not isinstance(ref_body, dict) or "object" not in ref_body:
+            raise HTTPException(status_code=500, detail=f"Failed to get default branch ref. Status: {ref_status}")
         base_sha = ref_body["object"]["sha"]
         
         # Create the branch
@@ -265,7 +271,7 @@ def start_agentic_fix(
         f"{supabase_url()}/rest/v1/repositories?id=eq.{request.repository_id}&workspace_id=eq.{workspace_id}",
         db_headers,
     )
-    if r_status != 200 or not r_body:
+    if r_status != 200 or not isinstance(r_body, list) or len(r_body) == 0 or not isinstance(r_body[0], dict):
         raise HTTPException(status_code=404, detail="Repository not found")
     repo = r_body[0]
 
@@ -274,7 +280,7 @@ def start_agentic_fix(
         f"{supabase_url()}/rest/v1/scan_findings?id=eq.{request.finding_id}",
         db_headers,
     )
-    if f_status != 200 or not f_body:
+    if f_status != 200 or not isinstance(f_body, list) or len(f_body) == 0 or not isinstance(f_body[0], dict):
         raise HTTPException(status_code=404, detail="Finding not found")
     finding = f_body[0]
     file_path = finding.get("file_path")

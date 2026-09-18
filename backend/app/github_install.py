@@ -87,9 +87,11 @@ def _json_post(url: str, headers: dict[str, str], payload: dict) -> tuple[int, o
         try:
             body = error.read().decode("utf-8").strip()
             return error.code, json.loads(body) if body else None
-        except:
+        except Exception as e:
+            print(f"[_json_post] Failed to parse HTTPError body for {url.split('?')[0]}: {e}")
             return error.code, None
-    except (URLError, JSONDecodeError, TimeoutError):
+    except (URLError, JSONDecodeError, TimeoutError) as e:
+        print(f"[_json_post] Network/JSON error for {url.split('?')[0]}: {e}")
         return 503, None
 
 
@@ -100,8 +102,14 @@ def _json_get(url: str, headers: dict[str, str]) -> tuple[int, object | None]:
             body = response.read().decode("utf-8").strip()
             return response.status, json.loads(body) if body else None
     except HTTPError as error:
-        return error.code, None
-    except (URLError, JSONDecodeError, TimeoutError):
+        try:
+            body = error.read().decode("utf-8").strip()
+            return error.code, json.loads(body) if body else None
+        except Exception as e:
+            print(f"[_json_get] Failed to parse HTTPError body for {url.split('?')[0]}: {e}")
+            return error.code, None
+    except (URLError, JSONDecodeError, TimeoutError) as e:
+        print(f"[_json_get] Network/JSON error for {url.split('?')[0]}: {e}")
         return 503, None
 
 
@@ -129,8 +137,8 @@ def _workspace_id_for_user(access_token: str) -> str:
     )
     if status == 401:
         raise HTTPException(status_code=401, detail="Authentication required")
-    if status != 200 or not isinstance(body, list) or not body:
-        print(f"workspace lookup failed: status={status}, body={body}")
+    if status != 200 or not isinstance(body, list) or not body or not isinstance(body[0], dict):
+        print(f"workspace lookup failed: status={status}, invalid body")
         raise HTTPException(status_code=400, detail="No workspace found")
     workspace_id = body[0].get("workspace_id")
     if not workspace_id:
