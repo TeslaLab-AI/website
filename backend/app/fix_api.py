@@ -84,7 +84,9 @@ def generate_pr_fix(request: FixRequest, authorization: str | None = Header(defa
     if f_status != 200 or not f_body:
         raise HTTPException(status_code=404, detail="Finding not found")
     finding = f_body[0]
-    file_path = finding["file_path"]
+    file_path = finding.get("file_path")
+    if not file_path or str(file_path).strip().lower() in ("", "n/a", "null", "none"):
+        raise HTTPException(status_code=400, detail="This finding is not fixable because it has no valid source file.")
 
     # 4. Get GitHub Installation Token with explicit write permissions for fix operations
     installation = get_workspace_installation(workspace_id)
@@ -275,6 +277,9 @@ def start_agentic_fix(
     if f_status != 200 or not f_body:
         raise HTTPException(status_code=404, detail="Finding not found")
     finding = f_body[0]
+    file_path = finding.get("file_path")
+    if not file_path or str(file_path).strip().lower() in ("", "n/a", "null", "none"):
+        raise HTTPException(status_code=400, detail="This finding is not fixable because it has no valid source file.")
 
     run_id = str(uuid.uuid4())
     event_bus.init_run(run_id, request.finding_id, request.repository_id)
