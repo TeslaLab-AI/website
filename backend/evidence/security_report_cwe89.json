@@ -1,0 +1,16 @@
+{
+  "passed": false,
+  "vulnerabilities": [
+    {
+      "severity": "critical",
+      "cwe": "CWE-89",
+      "file": "db_query.py",
+      "line": 7,
+      "description": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+      "remediation_hint": "Use parameterized queries with placeholder bindings (e.g. cursor.execute('SELECT ... WHERE col = ?', (val,))) instead of string formatting or concatenation."
+    }
+  ],
+  "new_vulnerabilities": [],
+  "resolved_vulnerabilities": [],
+  "raw_output": "Scanned 1 files. Found 1 vulnerabilities."
+}
