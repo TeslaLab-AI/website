@@ -36,7 +36,7 @@ from app.contracts.schemas import (
     PlanSkeleton,
     AgentEvent,
 )
-from app.agents.session_engine import (
+from agents.agent_1.session_engine import (
     validate_transition,
     InvalidStateTransitionError,
     create_session_graph,
@@ -320,6 +320,45 @@ def test_ac_e1_d1_04_invalid_transition_guard():
 
 
 # ============================================================================
+# Agent 1 Modular Structure & Integration Test
+# ============================================================================
+
+def test_agent_1_module_structure_and_integration():
+    """
+    Verifies that backend/agents/agent_1 exposes all required modular components
+    mirroring the team's standard agent architecture.
+    """
+    from agents.agent_1 import (
+        DiagnosisAgent,
+        FindingIngestionService,
+        SEEDED_FINDINGS,
+        validate_transition,
+        InvalidStateTransitionError,
+        PERMITTED_TRANSITIONS,
+        create_session_graph,
+    )
+
+    # 1. Verify Seeded Findings
+    assert len(SEEDED_FINDINGS) == 6
+    assert "FINDING-BUG-001" in SEEDED_FINDINGS
+
+    # 2. Verify Diagnosis Agent
+    agent = DiagnosisAgent(workspace_id="test-workspace-001")
+    triage = agent.triage_finding(SEEDED_FINDINGS["FINDING-BUG-001"])
+    assert triage["category"] == "bugs"
+    assert "strategy" in triage
+
+    # 3. Verify LangGraph skeleton compilation
+    graph = create_session_graph()
+    assert graph is not None
+
+    # 4. Verify transitions
+    assert validate_transition(SessionState.CREATED, SessionState.INVESTIGATING) is True
+    with pytest.raises(InvalidStateTransitionError):
+        validate_transition(SessionState.CREATED, SessionState.MERGED)
+
+
+# ============================================================================
 # Standalone execution entrypoint
 # ============================================================================
 
@@ -337,4 +376,8 @@ if __name__ == "__main__":
     test_ac_e1_d1_04_invalid_transition_guard()
     print("✅ AC-E1-D1-04: Invalid Transition Guard PASSED")
 
+    test_agent_1_module_structure_and_integration()
+    print("✅ Agent 1 Modular Architecture PASSED")
+
     print("\n🎉 ALL DAY 1 ACCEPTANCE CRITERIA VERIFIED (100% PASS RATE)!")
+

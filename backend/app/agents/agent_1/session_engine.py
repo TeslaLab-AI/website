@@ -1,9 +1,8 @@
 """
-TeslaLab AI — 13-State Session Engine & LangGraph StateGraph Skeleton.
-Re-exported from canonical module: agents.agent_1.session_engine.
+TeslaLab AI — Session Engine Bridge for app.agents.agent_1.
 """
 
-from agents.agent_1.session_engine import (
+from backend.agents.agent_1.session_engine import (
     InvalidStateTransitionError,
     PERMITTED_TRANSITIONS,
     validate_transition,
