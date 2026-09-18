@@ -15,7 +15,7 @@ import tempfile
 import pytest
 
 from tests.fixtures.day1_fixtures import create_mock_repo
-from app.agents.test_impact import build_import_graph, select_impacted_tests
+from agents.agent_3.test_impact import build_import_graph, select_impacted_tests
 
 
 def test_import_graph_construction():

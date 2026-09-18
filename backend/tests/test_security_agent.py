@@ -22,7 +22,7 @@ from tests.fixtures.day1_fixtures import (
     SAMPLE_DIFF_WITH_SQLI,
     SAMPLE_DIFF_WITH_SECRET,
 )
-from app.agents.security_agent import (
+from agents.agent_3.security_agent import (
     scan_codebase_security,
     scan_file_security,
     diff_security_gate,

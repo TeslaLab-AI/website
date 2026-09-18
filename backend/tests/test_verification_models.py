@@ -4,7 +4,7 @@ Unit tests verifying Phase 1 data contracts and models.
 Ensures serialization, validation, and defaults comply with Day 1 specification.
 """
 
-from app.agents.verification_models import (
+from agents.agent_3.verification_models import (
     VerificationReport,
     TestImpactManifest,
     VulnFinding,

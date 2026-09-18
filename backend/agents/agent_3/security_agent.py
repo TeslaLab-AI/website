@@ -19,7 +19,10 @@ import shutil
 import subprocess
 from typing import List, Tuple, Optional
 
-from app.agents.verification_models import VulnFinding, SecurityReport
+try:
+    from .verification_models import VulnFinding, SecurityReport
+except (ImportError, ValueError):
+    from agents.agent_3.verification_models import VulnFinding, SecurityReport
 
 
 # Common CWE Identifiers

@@ -18,7 +18,10 @@ import os
 import time
 from typing import Dict, List, Set, Tuple
 
-from app.agents.verification_models import TestImpactManifest
+try:
+    from .verification_models import TestImpactManifest
+except (ImportError, ValueError):
+    from agents.agent_3.verification_models import TestImpactManifest
 
 
 class ImportExtractor(ast.NodeVisitor):

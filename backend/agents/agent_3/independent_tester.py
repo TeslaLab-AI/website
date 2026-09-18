@@ -18,7 +18,10 @@ import time
 import subprocess
 from typing import List, Optional, Tuple, Dict, Any
 
-from app.agents.verification_models import VerificationReport
+try:
+    from .verification_models import VerificationReport
+except (ImportError, ValueError):
+    from agents.agent_3.verification_models import VerificationReport
 
 
 def discover_tests_for_files(repo_root: str, changed_files: List[str]) -> List[str]:

@@ -13,7 +13,7 @@ import tempfile
 import pytest
 
 from tests.fixtures.day1_fixtures import create_mock_repo
-from app.agents.independent_tester import (
+from agents.agent_3.independent_tester import (
     discover_tests_for_files,
     run_independent_verification,
 )

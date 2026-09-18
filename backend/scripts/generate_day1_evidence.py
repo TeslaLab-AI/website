@@ -25,9 +25,9 @@ from tests.fixtures.day1_fixtures import (
     SEEDED_SAFE_SQL_CODE,
     SEEDED_SECRET_LEAK_CODE,
 )
-from app.agents.independent_tester import run_independent_verification
-from app.agents.test_impact import select_impacted_tests
-from app.agents.security_agent import scan_codebase_security, diff_security_gate
+from agents.agent_3.independent_tester import run_independent_verification
+from agents.agent_3.test_impact import select_impacted_tests
+from agents.agent_3.security_agent import scan_codebase_security, diff_security_gate
 
 
 def main():
