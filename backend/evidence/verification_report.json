@@ -1,0 +1,10 @@
+{
+  "tests_run": 2,
+  "passed": 2,
+  "failed": 0,
+  "new_failures": [],
+  "repro_test_status": "PASS",
+  "duration_ms": 1274.25,
+  "test_runner": "pytest",
+  "logs": "--- Reproduction Test (tests/test_repro.py) ---\n============================= test session starts =============================\nplatform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\ASUS\\Desktop\\internship\\teslaLab\\website\\backend\\.venv\\Scripts\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\ASUS\\AppData\\Local\\Temp\\tmpi5br1x_z\ncollecting ... collected 1 item\n\ntests/test_repro.py::test_repro PASSED                                   [100%]\n\n============================== 1 passed in 0.04s ==============================\n\n--- Regression Suite ---\n============================= test session starts =============================\nplatform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\ASUS\\Desktop\\internship\\teslaLab\\website\\backend\\.venv\\Scripts\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\ASUS\\AppData\\Local\\Temp\\tmpi5br1x_z\ncollecting ... collected 1 item\n\ntests/test_client.py::test_calculate_fee PASSED                          [100%]\n\n============================== 1 passed in 0.02s ==============================\n"
+}
