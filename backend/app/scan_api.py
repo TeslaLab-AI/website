@@ -138,11 +138,8 @@ def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str, owner
         update_progress(scan_id, "analyzing", 75, "Running static code & dependency analysis (Semgrep)...")
         all_findings = run_semgrep(repo_root)
         
-        # Ensure we always have at least one finding to show the scan completed
-        if not all_findings:
-            all_findings = [
-                {"category": "testing", "severity": "low", "title": "Scan Completed", "description": f"Successfully ingested {len(files)} files and found 0 critical issues.", "file_path": "N/A", "line_number": 0},
-            ]
+        # If Semgrep executes successfully but finds 0 issues, it legitimately returns [].
+        # We no longer create fake findings here.
             
         update_progress(scan_id, "finalizing", 95, f"Generated {len(all_findings)} total findings. Persisting to database...")
             
