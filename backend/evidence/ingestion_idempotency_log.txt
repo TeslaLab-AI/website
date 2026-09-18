@@ -1,0 +1,25 @@
+============================================================
+TESLALAB AI — TASK 2: IDEMPOTENT FINDING INGESTION EVIDENCE
+Timestamp: 2026-09-18T16:45:17.463558+00:00
+============================================================
+
+--- 1. Ingesting 6 Canonical Seeded Findings ---
+Retrieved 6 frozen seeded findings:
+  • Finding: FINDING-BUG-001      -> Task: 4837ad65-1d11-47e0-8fc2-6ae0ead7ca66 | Session: 0c4c5320-6aab-4cee-a81b-78a0cbec6680 | Status: INVESTIGATING
+  • Finding: FINDING-BUG-002      -> Task: d5f9c0e5-2522-45c9-ba6a-c07e1c532102 | Session: 72396411-221a-4eac-9e23-c2d60b213870 | Status: INVESTIGATING
+  • Finding: FINDING-BUG-003      -> Task: 372a4a65-3a9d-4f59-8714-00d2455d2767 | Session: 41118e89-04b8-4485-a360-0cb3485c78c8 | Status: INVESTIGATING
+  • Finding: FINDING-DEP-001      -> Task: e42221b2-6382-4735-9df6-2a94f613d703 | Session: cbf38dec-ca32-4b61-9c13-cb1a13a6f2f6 | Status: INVESTIGATING
+  • Finding: FINDING-DEP-002      -> Task: 00d49c2d-24ac-4373-814c-eb99bd1011f0 | Session: 12e01f6d-4e08-4450-bd95-d3accde9c25e | Status: INVESTIGATING
+  • Finding: FINDING-SEC-001      -> Task: 91418f8f-cecd-4fda-9653-1050e821c833 | Session: ae7b4d40-2903-4eba-9c6d-da4e731534f5 | Status: INVESTIGATING
+
+Total Unique Tasks Created: 6 / 6
+
+--- 2. Rapid Double-Click Idempotency Check ---
+Testing rapid sequential investigate requests on 'FINDING-BUG-001'...
+  Request 1: Task=4837ad65-1d11-47e0-8fc2-6ae0ead7ca66 | is_existing=True
+  Request 2: Task=4837ad65-1d11-47e0-8fc2-6ae0ead7ca66 | is_existing=True (Identical=True)
+  Request 3: Task=4837ad65-1d11-47e0-8fc2-6ae0ead7ca66 | is_existing=True (Identical=True)
+  Request 4: Task=4837ad65-1d11-47e0-8fc2-6ae0ead7ca66 | is_existing=True (Identical=True)
+  Request 5: Task=4837ad65-1d11-47e0-8fc2-6ae0ead7ca66 | is_existing=True (Identical=True)
+
+Idempotency Verdict: PASSED (0 duplicate tasks created on 5 rapid retries).
