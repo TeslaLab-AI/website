@@ -265,7 +265,7 @@ class PlannerAgent:
             "- Every step must include step_number (1-indexed sequential), tool_name, tool_arguments, expected_outcome, rollback_action\n"
             "- Never touch protected paths (.env, .git, .github/workflows, lockfiles)\n"
             "- Never emit destructive commands (rm -rf, drop table, curl | sh, git push --force)\n"
-            "Return JSON matching ExecutionPlan schema."
+            f"Return JSON matching ExecutionPlan schema:\n{json.dumps(ExecutionPlan.model_json_schema(), indent=2)}"
         )
 
         user_prompt = f"""Generate an ExecutionPlan for this issue:
@@ -314,7 +314,7 @@ Test Command: {context.test_command or 'pytest'}
             model=self.model,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "You fix invalid execution plans. Output JSON only."},
+                {"role": "system", "content": f"You fix invalid execution plans. Output JSON only matching this schema:\n{json.dumps(ExecutionPlan.model_json_schema(), indent=2)}"},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.1,
