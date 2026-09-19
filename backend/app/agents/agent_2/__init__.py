@@ -45,6 +45,26 @@ from app.agents.agent_2.adapter import (
     execution_plan_to_fix_plan,
     fix_plan_to_execution_plan,
 )
+from app.agents.agent_2.gateway import (
+    LLMGateway,
+    default_gateway,
+    complete,
+    LLMResponse,
+    TokenUsage,
+    LLMMessage,
+    LLMError,
+    LLMRateLimitError,
+    LLMServerError,
+    BaseLLMAdapter,
+)
+from app.agents.agent_2.router import (
+    ModelRouter,
+    default_router,
+    get_model_for_task,
+    ModelRoute,
+    ModelTier,
+    RouterConfig,
+)
 
 __all__ = [
     "ALLOWED_TOOLS",
@@ -72,4 +92,20 @@ __all__ = [
     "default_planner",
     "execution_plan_to_fix_plan",
     "fix_plan_to_execution_plan",
+    "LLMGateway",
+    "default_gateway",
+    "complete",
+    "LLMResponse",
+    "TokenUsage",
+    "LLMMessage",
+    "LLMError",
+    "LLMRateLimitError",
+    "LLMServerError",
+    "BaseLLMAdapter",
+    "ModelRouter",
+    "default_router",
+    "get_model_for_task",
+    "ModelRoute",
+    "ModelTier",
+    "RouterConfig",
 ]
