@@ -36,6 +36,8 @@ from .day2_models import (
     LoopIterationEvent,
 )
 
+from .validation_engine import ValidationEngine
+
 __all__ = [
     "VerificationReport",
     "TestImpactManifest",
@@ -53,4 +55,5 @@ __all__ = [
     "RepairPlan",
     "LoopState",
     "LoopIterationEvent",
+    "ValidationEngine",
 ]
