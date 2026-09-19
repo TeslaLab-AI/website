@@ -21,11 +21,12 @@ except ImportError:
     pass
 
 
-def _require(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value:
-        raise RuntimeError(f"{name} is not configured")
-    return value
+def _require(*names: str) -> str:
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    raise RuntimeError(f"{names[0]} is not configured")
 
 
 def state_secret() -> str:
@@ -37,11 +38,11 @@ def github_app_slug() -> str:
 
 
 def supabase_url() -> str:
-    return _require("SUPABASE_URL").rstrip("/")
+    return _require("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL").rstrip("/")
 
 
 def supabase_publishable_key() -> str:
-    return _require("SUPABASE_PUBLISHABLE_KEY")
+    return _require("SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY")
 
 
 def supabase_service_role_key() -> str:
