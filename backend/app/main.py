@@ -14,6 +14,7 @@ from app.github_api import router as github_api_router
 from app.scan_api import router as scan_api_router
 from app.chat_api import router as chat_api_router
 from app.fix_api import router as fix_api_router
+from app.session_api import router as session_api_router
 
 app = FastAPI(title="TeslaLab API")
 app.include_router(github_install_router)
@@ -21,6 +22,7 @@ app.include_router(github_api_router)
 app.include_router(scan_api_router)
 app.include_router(chat_api_router)
 app.include_router(fix_api_router)
+app.include_router(session_api_router)
 
 
 @app.api_route("/", methods=["GET", "HEAD"])
