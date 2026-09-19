@@ -127,3 +127,151 @@ def test_regression_first_element():
         "test_repro": test_repro_file,
         "test_regression": test_reg_file,
     }
+
+
+def setup_bug2_zero_fee_repo(tmp_dir: str) -> dict[str, str]:
+    """Benchmark Bug 2: Missing zero-fee guardrail."""
+    src_dir = os.path.join(tmp_dir, "src", "payment")
+    test_dir = os.path.join(tmp_dir, "tests")
+    os.makedirs(src_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True)
+
+    client_file = os.path.join(src_dir, "client.py")
+    test_repro = os.path.join(test_dir, "test_repro_zero_fee.py")
+    test_reg = os.path.join(test_dir, "test_regression_payment.py")
+
+    with open(client_file, "w", encoding="utf-8") as f:
+        f.write("""def calculate_fee(amount: float) -> float:
+    # Bug: fails to return 0.0 for zero/negative values
+    return -1.0 if amount <= 0.0 else amount * 0.02
+""")
+
+    with open(test_repro, "w", encoding="utf-8") as f:
+        f.write("""from src.payment.client import calculate_fee
+
+def test_zero_amount_fee():
+    assert calculate_fee(0.0) == 0.0, "Expected fee 0.0 for zero amount"
+""")
+
+    with open(test_reg, "w", encoding="utf-8") as f:
+        f.write("""from src.payment.client import calculate_fee
+
+def test_positive_fee():
+    assert calculate_fee(100.0) == 2.0
+""")
+
+    return {
+        "source": client_file,
+        "test_repro": test_repro,
+        "test_regression": test_reg,
+    }
+
+
+def setup_bug3_security_sqli_repo(tmp_dir: str) -> dict[str, str]:
+    """Benchmark Bug 3: SQL Injection CWE-89 in query constructor."""
+    src_dir = os.path.join(tmp_dir, "src", "payment")
+    test_dir = os.path.join(tmp_dir, "tests")
+    os.makedirs(src_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True)
+
+    client_file = os.path.join(src_dir, "client.py")
+    test_reg = os.path.join(test_dir, "test_regression_payment.py")
+
+    with open(client_file, "w", encoding="utf-8") as f:
+        f.write("""def calculate_fee(amount: float) -> float:
+    cursor.execute(f"SELECT fee_rate FROM rates WHERE tier = '{amount}'")
+    return amount * 0.02
+""")
+
+    with open(test_reg, "w", encoding="utf-8") as f:
+        f.write("""from src.payment.client import calculate_fee
+
+def test_positive_fee():
+    assert True
+""")
+
+    return {
+        "source": client_file,
+        "test_repro": "",
+        "test_regression": test_reg,
+    }
+
+
+def setup_bug4_inverted_boolean_repo(tmp_dir: str) -> dict[str, str]:
+    """Benchmark Bug 4: Inverted boolean check in token validator."""
+    src_dir = os.path.join(tmp_dir, "src", "auth")
+    test_dir = os.path.join(tmp_dir, "tests")
+    os.makedirs(src_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True)
+
+    validator_file = os.path.join(src_dir, "validator.py")
+    test_repro = os.path.join(test_dir, "test_repro_auth.py")
+    test_reg = os.path.join(test_dir, "test_regression_auth.py")
+
+    with open(validator_file, "w", encoding="utf-8") as f:
+        f.write("""def validate_token(token: str) -> bool:
+    # Bug: inverted condition returns False for valid tokens
+    if not token or len(token) < 8:
+        return True
+    return False
+""")
+
+    with open(test_repro, "w", encoding="utf-8") as f:
+        f.write("""from src.auth.validator import validate_token
+
+def test_valid_token():
+    assert validate_token("long_valid_token_123") is True, "Valid token must return True"
+""")
+
+    with open(test_reg, "w", encoding="utf-8") as f:
+        f.write("""from src.auth.validator import validate_token
+
+def test_empty_token():
+    # Empty token will fail with current bug
+    pass
+""")
+
+    return {
+        "source": validator_file,
+        "test_repro": test_repro,
+        "test_regression": test_reg,
+    }
+
+
+def setup_bug5_string_sanitizer_repo(tmp_dir: str) -> dict[str, str]:
+    """Benchmark Bug 5: String sanitizer fails to hyphenate spaces."""
+    src_dir = os.path.join(tmp_dir, "src", "utils")
+    test_dir = os.path.join(tmp_dir, "tests")
+    os.makedirs(src_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True)
+
+    sanitizer_file = os.path.join(src_dir, "sanitizer.py")
+    test_repro = os.path.join(test_dir, "test_repro_sanitize.py")
+    test_reg = os.path.join(test_dir, "test_regression_sanitize.py")
+
+    with open(sanitizer_file, "w", encoding="utf-8") as f:
+        f.write("""def sanitize_slug(text: str) -> str:
+    # Bug: does not replace whitespace
+    return text.strip().lower()
+""")
+
+    with open(test_repro, "w", encoding="utf-8") as f:
+        f.write("""from src.utils.sanitizer import sanitize_slug
+
+def test_slug_hyphens():
+    assert sanitize_slug("Hello World") == "hello-world", "Spaces must be replaced by hyphens"
+""")
+
+    with open(test_reg, "w", encoding="utf-8") as f:
+        f.write("""from src.utils.sanitizer import sanitize_slug
+
+def test_simple_slug():
+    assert sanitize_slug("simple") == "simple"
+""")
+
+    return {
+        "source": sanitizer_file,
+        "test_repro": test_repro,
+        "test_regression": test_reg,
+    }
+

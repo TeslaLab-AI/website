@@ -79,11 +79,11 @@ class FailureDiagnosticParser:
                 suggested_fix="Revert or fix modifications that broke existing contract in dependent modules.",
             )
 
-        # Check 3: Reproduction Test Failure (e.g. logic or boundary bugs)
+        # Check 3: Reproduction Test Failure (e.g. logic, boundary, or sanitization bugs)
         repro_check = verdict.checks.get("repro_test")
         repro_output = repro_check.details.get("output", "") if repro_check else ""
         
-        # Detect off-by-one or count mismatch (e.g., 'Expected 5 items, got 4')
+        # Benchmark Bug 1: Off-by-one boundary bug
         if "Expected 5 items, got 4" in repro_output or "len(result) == 5" in repro_output:
             return ParsedDiagnostic(
                 failure_type="OFF_BY_ONE",
@@ -91,6 +91,36 @@ class FailureDiagnosticParser:
                 error_summary="Off-by-one slice calculation: end boundary omitted the last requested item.",
                 assertion_detail="Expected 5 items, got 4",
                 suggested_fix="Adjust upper slice index from 'start + (page_size - 1)' to 'start + page_size'.",
+            )
+
+        # Benchmark Bug 2: Missing zero amount fee check
+        if "Expected fee 0.0" in repro_output or "test_zero_amount_fee" in repro_output:
+            return ParsedDiagnostic(
+                failure_type="ZERO_FEE",
+                failing_file="src/payment/client.py",
+                error_summary="Missing zero/negative guardrail in fee calculation.",
+                assertion_detail="calculate_fee(0.0) != 0.0",
+                suggested_fix="Add guardrail: if amount <= 0.0: return 0.0",
+            )
+
+        # Benchmark Bug 4: Inverted boolean validation
+        if "Valid token must return True" in repro_output or "test_valid_token" in repro_output:
+            return ParsedDiagnostic(
+                failure_type="BOOLEAN_FLAG",
+                failing_file="src/auth/validator.py",
+                error_summary="Inverted boolean logic: valid token returns False.",
+                assertion_detail="validate_token returned False for valid token",
+                suggested_fix="Return False for invalid tokens and True for valid tokens.",
+            )
+
+        # Benchmark Bug 5: String sanitization whitespace handling
+        if "Spaces must be replaced by hyphens" in repro_output or "test_slug_hyphens" in repro_output:
+            return ParsedDiagnostic(
+                failure_type="SANITIZATION",
+                failing_file="src/utils/sanitizer.py",
+                error_summary="Sanitizer failed to replace whitespace with hyphens in slug.",
+                assertion_detail="sanitize_slug spaces not hyphenated",
+                suggested_fix="Chain .replace(' ', '-') to sanitize_slug return value.",
             )
 
         # Generic Assertion Failure
@@ -159,6 +189,15 @@ class RepairAgent:
 +    end = start + page_size
      return items[start:end]
 """
+        elif diagnostic.failure_type == "ZERO_FEE":
+            adjusted_patch = """--- a/src/payment/client.py
++++ b/src/payment/client.py
+@@ -1,2 +1,4 @@
+ def calculate_fee(amount: float) -> float:
++    if amount <= 0.0:
++        return 0.0
+     return amount * 0.02
+"""
         elif diagnostic.failure_type == "SECURITY":
             # Generate corrective diff with parameterized query
             adjusted_patch = """--- a/src/payment/client.py
@@ -168,6 +207,24 @@ class RepairAgent:
 -    cursor.execute(f"SELECT fee_rate FROM rates WHERE tier = '{amount}'")
 +    cursor.execute("SELECT fee_rate FROM rates WHERE tier = ?", (amount,))
      return amount * 0.02
+"""
+        elif diagnostic.failure_type == "BOOLEAN_FLAG":
+            adjusted_patch = """--- a/src/auth/validator.py
++++ b/src/auth/validator.py
+@@ -2,3 +2,3 @@
+     if not token or len(token) < 8:
+-        return True
+-    return False
++        return False
++    return True
+"""
+        elif diagnostic.failure_type == "SANITIZATION":
+            adjusted_patch = """--- a/src/utils/sanitizer.py
++++ b/src/utils/sanitizer.py
+@@ -2,2 +2,2 @@
+ def sanitize_slug(text: str) -> str:
+-    return text.strip().lower()
++    return text.strip().lower().replace(" ", "-")
 """
         elif diagnostic.failure_type == "REGRESSION":
             # Generate corrective diff restoring checkout calculation

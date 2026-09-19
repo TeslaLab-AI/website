@@ -38,6 +38,7 @@ from .day2_models import (
 
 from .validation_engine import ValidationEngine
 from .repair_agent import RepairAgent, FailureDiagnosticParser
+from .autonomous_loop import AutonomousRepairLoop, compute_diff_hash
 
 __all__ = [
     "VerificationReport",
@@ -59,5 +60,8 @@ __all__ = [
     "ValidationEngine",
     "RepairAgent",
     "FailureDiagnosticParser",
+    "AutonomousRepairLoop",
+    "compute_diff_hash",
 ]
+
 
