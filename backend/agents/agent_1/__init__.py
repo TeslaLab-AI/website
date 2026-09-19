@@ -25,6 +25,11 @@ from agents.agent_1.finding_ingestion import (
 )
 from agents.agent_1.diagnosis_agent import DiagnosisAgent
 
+from agents.agent_1.event_bus import (
+    AsyncEventBus,
+    event_bus,
+)
+
 __all__ = [
     "DiagnosisAgent",
     "FindingIngestionService",
@@ -36,4 +41,7 @@ __all__ = [
     "AgentSessionGraphState",
     "TransitionRequest",
     "IngestionResult",
+    "AsyncEventBus",
+    "event_bus",
 ]
+
