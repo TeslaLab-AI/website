@@ -24,6 +24,13 @@ from app.agents.agent_2.cost.session_cost import (
     SessionCostManager,
     default_session_manager,
 )
+from app.agents.agent_2.cost.budget import (
+    BudgetEnforcer,
+    BudgetCutoffEvent,
+    BudgetExceededError,
+    default_budget_enforcer,
+    DEFAULT_TASK_BUDGET_USD,
+)
 
 __all__ = [
     "ModelPricing",
@@ -40,4 +47,9 @@ __all__ = [
     "SessionCostState",
     "SessionCostManager",
     "default_session_manager",
+    "BudgetEnforcer",
+    "BudgetCutoffEvent",
+    "BudgetExceededError",
+    "default_budget_enforcer",
+    "DEFAULT_TASK_BUDGET_USD",
 ]

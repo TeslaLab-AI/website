@@ -27,6 +27,7 @@ from app.agents.agent_2.gateway.adapters.deepseek_adapter import DeepSeekAdapter
 from app.agents.agent_2.gateway.adapters.gemini_adapter import GeminiAdapter
 from app.agents.agent_2.gateway.telemetry import GatewayTelemetry, default_telemetry
 from app.agents.agent_2.cost.tracker import CostTracker, default_cost_tracker
+from app.agents.agent_2.cost.budget import BudgetEnforcer, BudgetExceededError, default_budget_enforcer
 
 logger = logging.getLogger("llm_gateway")
 
@@ -62,6 +63,7 @@ class LLMGateway:
         adapters: list[BaseLLMAdapter] | None = None,
         telemetry: GatewayTelemetry | None = None,
         cost_tracker: CostTracker | None = None,
+        budget_enforcer: BudgetEnforcer | None = None,
         max_retries: int = 3,
         backoff_factor: float = 0.5,
         sleep_fn: Callable[[float], None] | None = None,
@@ -69,6 +71,7 @@ class LLMGateway:
     ) -> None:
         self.telemetry = telemetry or default_telemetry
         self.cost_tracker = cost_tracker if cost_tracker is not None else default_cost_tracker
+        self.budget_enforcer = budget_enforcer if budget_enforcer is not None else default_budget_enforcer
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
         self.sleep_fn = sleep_fn or time.sleep
@@ -133,6 +136,18 @@ class LLMGateway:
         """
         primary_adapter = self.get_adapter_for_model(model)
         primary_provider = primary_adapter.provider_name
+
+        session_id = kwargs.get("session_id", "default")
+        # Pre-call hard budget enforcement ($0.50 per task ceiling)
+        if self.budget_enforcer:
+            self.budget_enforcer.check_budget(
+                session_id=session_id,
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                tracker=self.cost_tracker,
+                estimated_call_cost=kwargs.get("estimated_call_cost"),
+            )
 
         total_attempts = 0
         last_exception: LLMError | None = None
