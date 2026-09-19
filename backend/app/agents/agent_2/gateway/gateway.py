@@ -26,6 +26,7 @@ from app.agents.agent_2.gateway.adapters.openai_adapter import OpenAIAdapter
 from app.agents.agent_2.gateway.adapters.deepseek_adapter import DeepSeekAdapter
 from app.agents.agent_2.gateway.adapters.gemini_adapter import GeminiAdapter
 from app.agents.agent_2.gateway.telemetry import GatewayTelemetry, default_telemetry
+from app.agents.agent_2.cost.tracker import CostTracker, default_cost_tracker
 
 logger = logging.getLogger("llm_gateway")
 
@@ -60,12 +61,14 @@ class LLMGateway:
         self,
         adapters: list[BaseLLMAdapter] | None = None,
         telemetry: GatewayTelemetry | None = None,
+        cost_tracker: CostTracker | None = None,
         max_retries: int = 3,
         backoff_factor: float = 0.5,
         sleep_fn: Callable[[float], None] | None = None,
         fallback_map: dict[str, str] | None = None,
     ) -> None:
         self.telemetry = telemetry or default_telemetry
+        self.cost_tracker = cost_tracker if cost_tracker is not None else default_cost_tracker
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
         self.sleep_fn = sleep_fn or time.sleep
@@ -160,6 +163,13 @@ class LLMGateway:
                     fallback_triggered=False,
                     success=True,
                 )
+                if self.cost_tracker:
+                    cached_tokens = kwargs.get("cached_tokens", 0)
+                    session_id = kwargs.get("session_id", "default")
+                    cost_rec = self.cost_tracker.record_response(
+                        response, session_id=session_id, cached_tokens=cached_tokens
+                    )
+                    response.cost_usd = cost_rec.cost_usd
                 return response
 
             except Exception as exc:
@@ -226,6 +236,13 @@ class LLMGateway:
                         fallback_triggered=True,
                         success=True,
                     )
+                    if self.cost_tracker:
+                        cached_tokens = kwargs.get("cached_tokens", 0)
+                        session_id = kwargs.get("session_id", "default")
+                        fb_cost_rec = self.cost_tracker.record_response(
+                            fb_response, session_id=session_id, cached_tokens=cached_tokens
+                        )
+                        fb_response.cost_usd = fb_cost_rec.cost_usd
                     return fb_response
 
                 except Exception as fb_exc:

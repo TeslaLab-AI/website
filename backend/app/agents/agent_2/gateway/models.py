@@ -23,14 +23,22 @@ class TokenUsage(BaseModel):
 
     prompt_tokens: int = Field(default=0, ge=0, description="Tokens in input prompt")
     completion_tokens: int = Field(default=0, ge=0, description="Tokens in model output")
+    cached_tokens: int = Field(default=0, ge=0, description="Cached tokens in input prompt")
     total_tokens: int = Field(default=0, ge=0, description="Total tokens consumed")
 
     @classmethod
-    def compute(cls, prompt_tokens: int = 0, completion_tokens: int = 0, total_tokens: int | None = None) -> TokenUsage:
+    def compute(
+        cls,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        total_tokens: int | None = None,
+        cached_tokens: int = 0,
+    ) -> TokenUsage:
         tot = total_tokens if total_tokens is not None else (prompt_tokens + completion_tokens)
         return cls(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
+            cached_tokens=cached_tokens,
             total_tokens=tot,
         )
 
@@ -47,6 +55,7 @@ class LLMResponse(BaseModel):
     provider: str = Field(..., description="Underlying provider name (anthropic, openai, deepseek, gemini)")
     usage: TokenUsage = Field(default_factory=TokenUsage, description="Token usage statistics")
     latency_ms: float = Field(default=0.0, ge=0.0, description="Execution latency in milliseconds")
+    cost_usd: float = Field(default=0.0, ge=0.0, description="Computed USD cost for this LLM invocation")
     finish_reason: str | None = Field(default=None, description="Reason model stopped generating (stop, length, etc.)")
     parsed: Any | None = Field(default=None, description="Structured parsed content if json_schema was requested")
 
