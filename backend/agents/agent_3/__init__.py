@@ -28,6 +28,14 @@ from .security_agent import (
     scan_file_security,
 )
 
+from .day2_models import (
+    CheckResult,
+    ValidationVerdict,
+    RepairPlan,
+    LoopState,
+    LoopIterationEvent,
+)
+
 __all__ = [
     "VerificationReport",
     "TestImpactManifest",
@@ -40,4 +48,9 @@ __all__ = [
     "scan_codebase_security",
     "diff_security_gate",
     "scan_file_security",
+    "CheckResult",
+    "ValidationVerdict",
+    "RepairPlan",
+    "LoopState",
+    "LoopIterationEvent",
 ]
