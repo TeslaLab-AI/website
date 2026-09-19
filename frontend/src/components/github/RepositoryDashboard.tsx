@@ -331,6 +331,12 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
       )
     }
 
+    const isFixable = (filePath?: string | null): boolean => {
+      if (!filePath) return false;
+      const fp = filePath.trim().toLowerCase();
+      return fp !== '' && fp !== 'n/a' && fp !== 'null' && fp !== 'none';
+    }
+
     return (
       <div className="space-y-4">
         <div className="p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center justify-between">
@@ -471,7 +477,8 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
                   </button>
                   <button
                     onClick={() => handleGenerateFix(finding.id)}
-                    disabled={fixingId === finding.id}
+                    disabled={fixingId === finding.id || !isFixable(finding.file_path)}
+                    title={!isFixable(finding.file_path) ? "Cannot fix finding without a valid source file" : undefined}
                     className="flex items-center space-x-2 text-sm font-medium px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {fixingId === finding.id ? (
@@ -482,7 +489,9 @@ export function RepositoryDashboard({ repo }: { repo: Repo }) {
                   </button>
                   <button
                     onClick={() => handleAgenticFix(finding.id)}
-                    className="flex items-center space-x-2 text-sm font-medium px-3 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white rounded-lg transition-all shadow-sm"
+                    disabled={!isFixable(finding.file_path)}
+                    title={!isFixable(finding.file_path) ? "Cannot fix finding without a valid source file" : undefined}
+                    className="flex items-center space-x-2 text-sm font-medium px-3 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>🤖</span><span>Agentic Fix</span>
                   </button>

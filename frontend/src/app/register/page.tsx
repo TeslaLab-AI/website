@@ -33,8 +33,12 @@ export default function RegisterPage() {
     }
 
     try {
-      await signupUser(email, password, fullName)
-      setSuccess(true)
+      const result = await signupUser(email, password, fullName)
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        setSuccess(true)
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message)

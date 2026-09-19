@@ -4,4 +4,7 @@ Contains dedicated modules for each role:
 - agent_1: Diagnosis & Foundation Lead (Tasks 1–3)
 - agent_2: Planning & Gateway Lead
 - agent_3: Verification & Intelligence Lead
+
+Also re-exports app.agents for backwards/alternative path compatibility.
 """
+from app.agents import *

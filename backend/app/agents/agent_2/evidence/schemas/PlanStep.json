@@ -1,0 +1,280 @@
+{
+  "$defs": {
+    "ApplyPatchArgs": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Repository-relative file path to patch",
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "original_chunk": {
+          "description": "Exact snippet of original content to replace",
+          "title": "Original Chunk",
+          "type": "string"
+        },
+        "replacement_chunk": {
+          "description": "Replacement snippet",
+          "title": "Replacement Chunk",
+          "type": "string"
+        },
+        "line_number": {
+          "description": "Approximate or exact starting line number of original chunk",
+          "minimum": 1,
+          "title": "Line Number",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "original_chunk",
+        "replacement_chunk",
+        "line_number"
+      ],
+      "title": "ApplyPatchArgs",
+      "type": "object"
+    },
+    "OpenPrArgs": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "description": "Title of the pull request",
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "branch": {
+          "description": "Name of the head branch",
+          "minLength": 1,
+          "title": "Branch",
+          "type": "string"
+        },
+        "body": {
+          "description": "Pull request body/description",
+          "minLength": 1,
+          "title": "Body",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "branch",
+        "body"
+      ],
+      "title": "OpenPrArgs",
+      "type": "object"
+    },
+    "ReadFileArgs": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Repository-relative file path to read",
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "start_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional starting line (1-indexed)",
+          "title": "Start Line"
+        },
+        "end_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional ending line (1-indexed)",
+          "title": "End Line"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "ReadFileArgs",
+      "type": "object"
+    },
+    "RunCommandArgs": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "description": "Shell command to run",
+          "minLength": 1,
+          "title": "Command",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 60,
+          "description": "Execution timeout in seconds",
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "cwd": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional working directory relative to workspace root",
+          "title": "Cwd"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "title": "RunCommandArgs",
+      "type": "object"
+    },
+    "RunTestsArgs": {
+      "additionalProperties": false,
+      "properties": {
+        "test_command": {
+          "description": "Test command to execute",
+          "minLength": 1,
+          "title": "Test Command",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 60,
+          "description": "Execution timeout in seconds",
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "test_command"
+      ],
+      "title": "RunTestsArgs",
+      "type": "object"
+    },
+    "SearchCodeArgs": {
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "description": "Search term or regex pattern",
+          "minLength": 1,
+          "title": "Pattern",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional directory or file sub-path to scope search",
+          "title": "Path"
+        },
+        "regex": {
+          "default": false,
+          "description": "Whether pattern should be treated as regex",
+          "title": "Regex",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "title": "SearchCodeArgs",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "step_number": {
+      "description": "1-indexed sequence number of the step",
+      "minimum": 1,
+      "title": "Step Number",
+      "type": "integer"
+    },
+    "tool_name": {
+      "description": "Name of the tool to execute",
+      "enum": [
+        "read_file",
+        "search_code",
+        "apply_patch",
+        "run_tests",
+        "run_command",
+        "open_pr"
+      ],
+      "title": "Tool Name",
+      "type": "string"
+    },
+    "tool_arguments": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReadFileArgs"
+        },
+        {
+          "$ref": "#/$defs/SearchCodeArgs"
+        },
+        {
+          "$ref": "#/$defs/ApplyPatchArgs"
+        },
+        {
+          "$ref": "#/$defs/RunTestsArgs"
+        },
+        {
+          "$ref": "#/$defs/RunCommandArgs"
+        },
+        {
+          "$ref": "#/$defs/OpenPrArgs"
+        },
+        {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      ],
+      "description": "Strictly validated tool arguments matching the tool schema",
+      "title": "Tool Arguments"
+    },
+    "expected_outcome": {
+      "description": "Expected result or condition after execution",
+      "minLength": 1,
+      "title": "Expected Outcome",
+      "type": "string"
+    },
+    "rollback_action": {
+      "description": "Action or command to revert this step on failure",
+      "minLength": 1,
+      "title": "Rollback Action",
+      "type": "string"
+    }
+  },
+  "required": [
+    "step_number",
+    "tool_name",
+    "tool_arguments",
+    "expected_outcome",
+    "rollback_action"
+  ],
+  "title": "PlanStep",
+  "type": "object"
+}

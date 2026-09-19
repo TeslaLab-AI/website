@@ -1,0 +1,22 @@
+============================================================
+TESLALAB AI — SAST SCAN LOGS (CLEAN VS VULNERABLE SAMPLES)
+Timestamp: 2026-09-18T12:56:56Z
+============================================================
+
+--- SAMPLE 1: VULNERABLE CODE (SQLi & Leaked Token) ---
+Scan Passed: False
+Vulnerabilities Found: 3
+  [1] Severity=HIGH | CWE=CWE-798 | Line 14
+      Description: Hardcoded credential detected: GitHub Personal Access Token
+      Remediation: Never hardcode credentials or secrets in source code. Store them in environment variables or a secrets manager.
+  [2] Severity=HIGH | CWE=CWE-798 | Line 14
+      Description: Hardcoded credential detected: Hardcoded Secret Token
+      Remediation: Never hardcode credentials or secrets in source code. Store them in environment variables or a secrets manager.
+  [3] Severity=CRITICAL | CWE=CWE-89 | Line 7
+      Description: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')
+      Remediation: Use parameterized queries with placeholder bindings (e.g. cursor.execute('SELECT ... WHERE col = ?', (val,))) instead of string formatting or concatenation.
+
+--- SAMPLE 2: CLEAN CODE (Parameterized Query) ---
+Scan Passed: True
+Vulnerabilities Found: 0
+Summary: Scanned 1 files. Found 0 vulnerabilities.
