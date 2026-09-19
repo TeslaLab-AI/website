@@ -1,0 +1,30 @@
+Test Execution Started: 2026-09-19T08:18:07.244512+00:00
+
+[TEST 1] Verifying Event Types & Strongly-Typed Schema...
+  ✅ All 8 structured agent step event types validated.
+
+[TEST 2] Testing Real-Time WebSocket Streaming on Session: 8a4c95c9-ac9f-4a2e-a8a3-5e1af7f2ab78...
+  • WebSocket connection established successfully to /sessions/{id}/stream
+  → Received via WS in <0.22ms: [SESSION_STARTED] {'finding_id': 'FINDING-BUG-001', 'step': 1}
+  → Received via WS in <0.24ms: [SEARCHING_REPOSITORY] {'query': 'auth handler', 'files_found': 3, 'step': 2}
+  → Received via WS in <0.18ms: [READING_FILE] {'file': 'src/auth/handler.ts', 'lines': 42, 'step': 3}
+  → Received via WS in <0.16ms: [HYPOTHESIS_GENERATED] {'hypothesis': 'Missing null-check on token header', 'step': 4}
+  → Received via WS in <0.17ms: [PLAN_CREATED] {'plan_id': '31385985-f4ee-44c3-bd0f-85f07f260548', 'steps_count': 3, 'step': 5}
+
+  ⏱️ Average Event Dispatch Latency: 0.19 ms (<20ms SLA)
+  ⏱️ Total Batch Latency for 5 Events: 5.76 ms
+  ✅ Chronological ordering and payload integrity verified 100%.
+
+[TEST 3] Testing Historical Replay for Reconnecting Subscribers...
+  ✅ Replay buffer flushed 5 historic events immediately upon connect.
+
+[TEST 4] Testing Server-Sent Events (SSE) Stream Endpoint...
+  ✅ SSE Endpoint returned HTTP 200 with text/event-stream content type.
+  ✅ SSE Stream yielded 5 event lines (Sample: data: {"id": "e9bb26d7-713d-4e98-a948-2b9b78c1f3df...)
+
+[TEST 5] Testing End-to-End Ingestion Event Emission...
+  ✅ Finding investigation automatically emitted SESSION_STARTED on session cc8d693a...
+
+======================================================================
+🎉 TASK 4 ACCEPTANCE TEST COMPLETED: ALL GATES & SLAS PASSED (100%)
+======================================================================

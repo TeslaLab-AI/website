@@ -19,18 +19,22 @@ import json
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
-from fastapi import APIRouter, Header, HTTPException
+import asyncio
+from fastapi import APIRouter, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from app.config import supabase_url, supabase_service_role_key
 from app.github_api import _json_request, _json_post
 from app.github_install import _workspace_id_for_user
-from app.contracts.schemas import SessionState
+from app.contracts.schemas import SessionState, AgentEventType
 from agents.agent_1 import (
     FindingIngestionService,
     SEEDED_FINDINGS,
     validate_transition,
     InvalidStateTransitionError,
     TransitionRequest,
+    event_bus,
 )
 from agents.agent_1.finding_ingestion import (
     _memory_tasks,
@@ -40,6 +44,14 @@ from agents.agent_1.finding_ingestion import (
 )
 
 router = APIRouter()
+
+
+class EmitEventRequest(BaseModel):
+    event_type: str
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    from_state: Optional[str] = None
+    to_state: Optional[str] = None
+
 
 
 def _resolve_workspace_or_default(authorization: str | None) -> str:
@@ -70,7 +82,27 @@ def investigate_finding(
     Delegates to Agent 1 FindingIngestionService to map 1 finding -> 1 task + 1 session.
     """
     workspace_id = _resolve_workspace_or_default(authorization)
-    return FindingIngestionService.ingest(finding_id, workspace_id)
+    result = FindingIngestionService.ingest(finding_id, workspace_id)
+    session_id = result.get("session_id")
+    if session_id:
+        from app.tasks import run_investigation_task
+        async_result = run_investigation_task.delay(session_id, finding_id, workspace_id)
+        result["celery_task_id"] = async_result.id
+
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=202, content=result)
+
+
+@router.get("/tasks/status/{celery_task_id}")
+@router.get("/api/tasks/status/{celery_task_id}")
+def get_celery_task_status(celery_task_id: str):
+    from app.celery_app import celery_app
+    res = celery_app.AsyncResult(celery_task_id)
+    return {
+        "celery_task_id": celery_task_id, 
+        "status": res.status, 
+        "result": res.result if res.ready() else None
+    }
 
 
 @router.get("/sessions/{session_id}")
@@ -198,9 +230,104 @@ def transition_session(
         _memory_sessions[session_id]["updated_at"] = now_microsecond_iso
     _memory_events.append(event_payload)
 
+    # Dispatch to EventBus subscribers
+    event_bus.emit_sync(
+        session_id=session_id,
+        event_type=AgentEventType.STATE_TRANSITION,
+        payload=body.payload,
+        from_state=current_state,
+        to_state=target_state,
+    )
+
     return {
         "session_id": session_id,
         "previous_state": current_state.value,
         "current_state": target_state.value,
         "timestamp": now_microsecond_iso,
     }
+
+
+@router.post("/sessions/{session_id}/events")
+@router.post("/api/sessions/{session_id}/events")
+async def emit_session_event(session_id: str, body: EmitEventRequest):
+    """
+    Direct endpoint for emitting structured agent step events.
+    Enables step-by-step transparency from planner, executor, or test harnesses.
+    """
+    record = await event_bus.emit(
+        session_id=session_id,
+        event_type=body.event_type,
+        payload=body.payload,
+        from_state=body.from_state or SessionState.INVESTIGATING.value,
+        to_state=body.to_state or SessionState.INVESTIGATING.value,
+    )
+    return {"status": "emitted", "event": record}
+
+
+@router.websocket("/sessions/{session_id}/stream")
+@router.websocket("/api/sessions/{session_id}/stream")
+async def stream_session_websocket(websocket: WebSocket, session_id: str):
+    """
+    Real-time WebSocket event stream for a session.
+    Replays history first, then streams all agent events live to client.
+    """
+    await websocket.accept()
+    queue = event_bus.subscribe(session_id)
+    try:
+        # Replay event history in chronological order
+        history = event_bus.get_history(session_id)
+        for ev in history:
+            await websocket.send_json(ev)
+
+        while True:
+            ev = await queue.get()
+            await websocket.send_json(ev)
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
+        event_bus.unsubscribe(session_id, queue)
+
+
+@router.get("/sessions/{session_id}/stream")
+@router.get("/api/sessions/{session_id}/stream")
+async def stream_session_sse(session_id: str, tail: Optional[int] = None):
+    """
+    Server-Sent Events (SSE) stream endpoint.
+    If tail is provided, flushes the latest N historic events and completes.
+    Otherwise, keeps connection alive streaming real-time events with heartbeats.
+    """
+    async def sse_generator():
+        history = event_bus.get_history(session_id)
+        if tail is not None:
+            slice_events = history[-tail:] if tail > 0 else history
+            for ev in slice_events:
+                yield f"data: {json.dumps(ev)}\n\n"
+            return
+
+        queue = event_bus.subscribe(session_id)
+        try:
+            for ev in history:
+                yield f"data: {json.dumps(ev)}\n\n"
+
+            while True:
+                try:
+                    ev = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield f"data: {json.dumps(ev)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"
+        except (asyncio.CancelledError, Exception):
+            pass
+        finally:
+            event_bus.unsubscribe(session_id, queue)
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+

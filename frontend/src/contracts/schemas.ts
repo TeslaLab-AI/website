@@ -73,12 +73,24 @@ export interface PlanSkeleton {
   updated_at: string
 }
 
+export type AgentEventType =
+  | 'SESSION_STARTED'
+  | 'SEARCHING_REPOSITORY'
+  | 'READING_FILE'
+  | 'HYPOTHESIS_GENERATED'
+  | 'PLAN_CREATED'
+  | 'CODE_MODIFIED'
+  | 'TESTS_RUNNING'
+  | 'PR_OPENED'
+  | 'state_transition'
+
 export interface AgentEvent {
   id: string
   session_id: string
-  from_state: SessionState
-  to_state: SessionState
-  event_type: string
+  from_state?: SessionState | string
+  to_state?: SessionState | string
+  event_type: AgentEventType | string
   payload: Record<string, any>
   timestamp: string
 }
+

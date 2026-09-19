@@ -69,6 +69,18 @@ class Finding(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+class BugFinding(BaseModel):
+    """Normalized schema for intake from Sentry, GitHub, and LLM extraction"""
+    model_config = ConfigDict(extra="forbid")
+    
+    id: str = Field(..., description="Unique ID for the bug (e.g. sentry-id, github-issue-id)")
+    title: str = Field(..., min_length=1)
+    description: str = Field(..., min_length=1)
+    stack_trace: Optional[str] = Field(default=None, description="Full stringified stack trace if available")
+    files_hint: List[str] = Field(default_factory=list, description="List of exact file paths implicated in the crash or reproduction")
+    environment: Dict[str, Any] = Field(default_factory=dict, description="Metadata tags, breadcrumbs, OS version, etc")
+
+
 class Task(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
@@ -116,13 +128,26 @@ class PlanSkeleton(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class AgentEventType(str, Enum):
+    SESSION_STARTED = "SESSION_STARTED"
+    SEARCHING_REPOSITORY = "SEARCHING_REPOSITORY"
+    READING_FILE = "READING_FILE"
+    HYPOTHESIS_GENERATED = "HYPOTHESIS_GENERATED"
+    PLAN_CREATED = "PLAN_CREATED"
+    CODE_MODIFIED = "CODE_MODIFIED"
+    TESTS_RUNNING = "TESTS_RUNNING"
+    PR_OPENED = "PR_OPENED"
+    STATE_TRANSITION = "state_transition"
+
+
 class AgentEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
     id: str = Field(..., description="Unique UUID of the event")
     session_id: str = Field(..., description="Associated session UUID")
-    from_state: SessionState
-    to_state: SessionState
+    from_state: SessionState = Field(default=SessionState.INVESTIGATING)
+    to_state: SessionState = Field(default=SessionState.INVESTIGATING)
     event_type: str = Field(..., min_length=1)
     payload: Dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+

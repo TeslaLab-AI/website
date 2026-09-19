@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { SessionState } from '@/contracts/schemas'
+import { ActivityStream } from './ActivityStream'
 
 interface SessionStepperProps {
   sessionId: string
@@ -34,7 +35,8 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
   const [events, setEvents] = useState<EventLog[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'stepper' | 'logs'>('stepper')
+  const [activeTab, setActiveTab] = useState<'stepper' | 'stream' | 'logs'>('stepper')
+
 
   // Poll session state from backend every 2.5 seconds
   useEffect(() => {
@@ -133,6 +135,17 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
             Stepper
           </button>
           <button
+            onClick={() => setActiveTab('stream')}
+            className={`px-2.5 py-1 rounded-md transition-colors flex items-center space-x-1.5 ${
+              activeTab === 'stream'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-medium'
+                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Live Stream</span>
+          </button>
+          <button
             onClick={() => setActiveTab('logs')}
             className={`px-2.5 py-1 rounded-md transition-colors ${
               activeTab === 'logs'
@@ -143,6 +156,7 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
             Audit Log ({events.length})
           </button>
         </div>
+
       </div>
 
       {error && (
@@ -268,6 +282,16 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
               </button>
             </div>
           </div>
+
+          {/* Real-time terminal activity stream preview */}
+          <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
+            <ActivityStream sessionId={sessionId} maxHeight="220px" />
+          </div>
+        </div>
+      ) : activeTab === 'stream' ? (
+        /* Dedicated Full-height Live Activity Stream Tab */
+        <div className="py-2">
+          <ActivityStream sessionId={sessionId} maxHeight="480px" />
         </div>
       ) : (
         /* Event audit logs with microsecond precision */
@@ -289,6 +313,7 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
           )}
         </div>
       )}
+
     </div>
   )
 }
