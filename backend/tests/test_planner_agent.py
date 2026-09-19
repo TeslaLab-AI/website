@@ -24,6 +24,12 @@ from app.agents.agent_2.validator import default_validator
 
 class TestPlannerAgent:
     """Task 16 PlannerAgent test suite."""
+    
+    @pytest.fixture(autouse=True)
+    def clear_openai_env(self, monkeypatch):
+        """Ensure unit tests use the deterministic planner by hiding OPENAI_API_KEY."""
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
 
     def test_planner_basic_seeded_bug(self):
         """Verify planner produces validated ExecutionPlan with >= 3 steps from RCA & Context."""
