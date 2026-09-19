@@ -31,6 +31,12 @@ from app.agents.executor import execute_plan
 from app.agents.tester import run_tests, TestStatus
 from app.agents.verifier import verify_fix
 from app.agents.sandbox import IsolatedWorkspace
+from app.agents.agent_2 import (
+    default_validator,
+    fix_plan_to_execution_plan,
+    execution_plan_to_fix_plan,
+    ExecutionPlan,
+)
 
 from app.github_api import _json_request, _json_post, get_workspace_installation, get_installation_token
 from app.config import supabase_url, supabase_service_role_key
@@ -140,6 +146,7 @@ def run_pipeline(
         # ── 5. Plan → Execute → Test → Verify loop ────────────────
         previous_attempts: list[dict] = []
         final_plan = None
+        active_fix_plan = None
         final_test = None
         final_verify = None
         workspace: IsolatedWorkspace | None = None
@@ -163,9 +170,37 @@ def run_pipeline(
                 workspace.cleanup()
             workspace = create_workspace(repo_root, name)
 
+            # Static Plan Validation before execution (Agent 2 gatekeeper)
+            exec_plan = (
+                final_plan
+                if isinstance(final_plan, ExecutionPlan)
+                else fix_plan_to_execution_plan(final_plan)
+            )
+            val_res = default_validator.validate(exec_plan, workspace_root=workspace.root)
+            if not val_res.is_valid:
+                err_summary = "; ".join(val_res.errors)
+                bus.update_phase(run_id, "plan", f"Plan validation rejected: {err_summary}")
+                previous_attempts.append({
+                    "plan_explanation": getattr(final_plan, "explanation", "FixPlan"),
+                    "test_result": f"Plan rejected by PlanValidator: {err_summary}",
+                    "verify_result": "Execution blocked by static validator",
+                })
+                if attempt == MAX_ATTEMPTS:
+                    bus.fail_run(run_id, f"All {MAX_ATTEMPTS} attempts failed plan validation: {err_summary}")
+                    if workspace:
+                        workspace.cleanup()
+                    return
+                continue
+
+            # Adapt ExecutionPlan to FixPlan if needed for the executor
+            if isinstance(final_plan, ExecutionPlan):
+                active_fix_plan = execution_plan_to_fix_plan(final_plan, workspace_root=workspace.root)
+            else:
+                active_fix_plan = final_plan
+
             # Execute
-            bus.update_phase(run_id, "execute", f"Applying {len(final_plan.steps)} fix step(s)...")
-            exec_result = execute_plan(final_plan, workspace)
+            bus.update_phase(run_id, "execute", f"Applying {len(active_fix_plan.steps)} fix step(s)...")
+            exec_result = execute_plan(active_fix_plan, workspace)
             if not exec_result.success:
                 bus.update_phase(run_id, "execute", f"Executor errors: {exec_result.errors}")
 
@@ -228,7 +263,8 @@ def run_pipeline(
             return
 
         # Commit each changed file
-        for step in final_plan.steps:
+        commit_steps = active_fix_plan.steps if active_fix_plan else final_plan.steps
+        for step in commit_steps:
             if step.action in ("MODIFY", "CREATE") and step.content:
                 abs_path = workspace.resolve(step.file_path)
                 if not os.path.exists(abs_path):

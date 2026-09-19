@@ -1,0 +1,37 @@
+{
+  "plan_payload": {
+    "goal": "Force overwrite remote master",
+    "steps": [
+      {
+        "step_number": 1,
+        "tool_name": "read_file",
+        "tool_arguments": {
+          "path": "README.md"
+        },
+        "expected_outcome": "read",
+        "rollback_action": "none"
+      },
+      {
+        "step_number": 2,
+        "tool_name": "run_command",
+        "tool_arguments": {
+          "command": "git push origin master --force"
+        },
+        "expected_outcome": "overwrite",
+        "rollback_action": "none"
+      }
+    ],
+    "affected_files": [
+      "README.md"
+    ],
+    "estimated_complexity": "High",
+    "rollback_plan": "none"
+  },
+  "validator_result": {
+    "is_valid": false,
+    "errors": [
+      "[DESTRUCTIVE_COMMAND_VIOLATION] Step 2 contains forbidden command: 'git push --force'."
+    ],
+    "warnings": []
+  }
+}
