@@ -35,6 +35,20 @@ const nextConfig: NextConfig = {
           ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/github/fix/:path*`
           : "http://127.0.0.1:8000/api/github/fix/:path*",
       },
+      // 5. Proxy Day 1 Finding Ingestion routes
+      {
+        source: "/api/findings/:path*",
+        destination: process.env.NEXT_PUBLIC_BACKEND_URL
+          ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/findings/:path*`
+          : "http://127.0.0.1:8000/api/findings/:path*",
+      },
+      // 6. Proxy Day 1 Session & State Machine routes
+      {
+        source: "/api/sessions/:path*",
+        destination: process.env.NEXT_PUBLIC_BACKEND_URL
+          ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/:path*`
+          : "http://127.0.0.1:8000/api/sessions/:path*",
+      },
     ];
   },
 };

@@ -1,0 +1,81 @@
+================================================================================
+TESLALAB AI — STAGE 0 EVALUATION: DAY 1 DB SCHEMA INSPECTION LOG
+Timestamp: 2026-09-18T11:25:26.831544+00:00
+Source Migration: 009_agent_foundation_and_sessions.sql
+================================================================================
+
+Total Tables Discovered: 5
+--------------------------------------------------------------------------------
+
+[TABLE] public.tasks
+  • id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  • workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE
+  • finding_id text NOT NULL
+  • title text NOT NULL
+  • category text NOT NULL
+  • severity text NOT NULL
+  • status text NOT NULL DEFAULT 'open'
+  • created_at timestamptz DEFAULT now()
+  • updated_at timestamptz DEFAULT now()
+  • UNIQUE(workspace_id, finding_id)
+
+[TABLE] public.agent_sessions
+  • id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  • task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE
+  • workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE
+  • current_state text NOT NULL DEFAULT 'CREATED'
+  • created_at timestamptz DEFAULT now()
+  • updated_at timestamptz DEFAULT now()
+  • UNIQUE(task_id)
+
+[TABLE] public.agent_events
+  • id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  • session_id uuid NOT NULL REFERENCES public.agent_sessions(id) ON DELETE CASCADE
+  • from_state text NOT NULL
+  • to_state text NOT NULL
+  • event_type text NOT NULL
+  • payload jsonb DEFAULT '{}'::jsonb
+  • timestamp timestamptz(6) DEFAULT clock_timestamp()
+
+[TABLE] public.plans
+  • id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  • session_id uuid NOT NULL REFERENCES public.agent_sessions(id) ON DELETE CASCADE
+  • task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE
+  • version int NOT NULL DEFAULT 1
+  • status text NOT NULL DEFAULT 'draft'
+  • steps jsonb DEFAULT '[]'::jsonb
+  • created_at timestamptz DEFAULT now()
+  • updated_at timestamptz DEFAULT now()
+
+[TABLE] public.executions
+  • id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  • session_id uuid NOT NULL REFERENCES public.agent_sessions(id) ON DELETE CASCADE
+  • plan_id uuid NOT NULL REFERENCES public.plans(id) ON DELETE CASCADE
+  • step_index int NOT NULL DEFAULT 0
+  • tool_name text NOT NULL
+  • tool_input jsonb DEFAULT '{}'::jsonb
+  • tool_output jsonb DEFAULT '{}'::jsonb
+  • status text NOT NULL DEFAULT 'pending'
+  • created_at timestamptz DEFAULT now()
+  • updated_at timestamptz DEFAULT now()
+
+--------------------------------------------------------------------------------
+Total Indexes Discovered: 6
+  • Index: idx_tasks_workspace_finding ON public.tasks(workspace_id, finding_id)
+  • Index: idx_agent_sessions_task ON public.agent_sessions(task_id)
+  • Index: idx_agent_sessions_workspace ON public.agent_sessions(workspace_id)
+  • Index: idx_agent_events_session ON public.agent_events(session_id)
+  • Index: idx_plans_session ON public.plans(session_id)
+  • Index: idx_executions_session_plan ON public.executions(session_id, plan_id)
+
+--------------------------------------------------------------------------------
+Total RLS Policies Discovered: 5
+  • Policy: "Users can view workspace tasks" ON public.tasks
+  • Policy: "Users can view workspace agent_sessions" ON public.agent_sessions
+  • Policy: "Users can view session agent_events" ON public.agent_events
+  • Policy: "Users can view workspace plans" ON public.plans
+  • Policy: "Users can view workspace executions" ON public.executions
+
+================================================================================
+SCHEMA INSPECTION INTEGRITY CHECK: 100% VALIDATED (ZERO CONFLICTS)
+================================================================================

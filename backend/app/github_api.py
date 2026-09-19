@@ -41,9 +41,11 @@ def _json_request(url: str, headers: dict[str, str], method: str = "GET", data: 
         try:
             body = error.read().decode("utf-8").strip()
             return error.code, json.loads(body) if body else None
-        except:
+        except Exception as e:
+            print(f"[_json_request] Failed to parse HTTPError body for {url.split('?')[0]}: {e}")
             return error.code, None
-    except (URLError, json.JSONDecodeError, TimeoutError):
+    except (URLError, json.JSONDecodeError, TimeoutError) as e:
+        print(f"[_json_request] Network/JSON error for {url.split('?')[0]}: {e}")
         return 503, None
 
 def _json_post(url: str, headers: dict[str, str], payload: dict) -> tuple[int, object | None]:
@@ -110,6 +112,8 @@ def get_installation_token(installation_id: int, permissions: dict | None = None
         with urlopen(request, timeout=10) as response:
             resp_body = response.read().decode("utf-8")
             parsed = _json.loads(resp_body)
+            if not isinstance(parsed, dict):
+                raise HTTPException(status_code=500, detail="Invalid JSON response from GitHub")
             print(f"[GitHub Token] Granted permissions: {parsed.get('permissions', {})}")
             if "token" not in parsed:
                 raise HTTPException(status_code=500, detail="Failed to acquire GitHub installation token")

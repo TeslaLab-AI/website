@@ -1,0 +1,41 @@
+{
+  "plan_payload": {
+    "goal": "Step numbering gap",
+    "steps": [
+      {
+        "step_number": 1,
+        "tool_name": "read_file",
+        "tool_arguments": {
+          "path": "app.py"
+        },
+        "expected_outcome": "read",
+        "rollback_action": "none"
+      },
+      {
+        "step_number": 4,
+        "tool_name": "apply_patch",
+        "tool_arguments": {
+          "path": "app.py",
+          "original_chunk": "a",
+          "replacement_chunk": "b",
+          "line_number": 1
+        },
+        "expected_outcome": "patch",
+        "rollback_action": "none"
+      }
+    ],
+    "affected_files": [
+      "app.py"
+    ],
+    "estimated_complexity": "Medium",
+    "rollback_plan": "none"
+  },
+  "validator_result": {
+    "is_valid": false,
+    "errors": [
+      "[INVALID_STEP_NUMBERING] Expected step number 2, but got 4.",
+      "[INVALID_EXECUTION_ORDER] Plan proposes EDIT (apply_patch) without subsequent TEST or VERIFY step."
+    ],
+    "warnings": []
+  }
+}

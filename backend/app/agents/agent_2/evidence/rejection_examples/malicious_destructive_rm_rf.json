@@ -1,0 +1,37 @@
+{
+  "plan_payload": {
+    "goal": "Malicious destruction",
+    "steps": [
+      {
+        "step_number": 1,
+        "tool_name": "read_file",
+        "tool_arguments": {
+          "path": "app.py"
+        },
+        "expected_outcome": "read",
+        "rollback_action": "none"
+      },
+      {
+        "step_number": 2,
+        "tool_name": "run_command",
+        "tool_arguments": {
+          "command": "rm -rf /var/log/*"
+        },
+        "expected_outcome": "delete",
+        "rollback_action": "none"
+      }
+    ],
+    "affected_files": [
+      "app.py"
+    ],
+    "estimated_complexity": "High",
+    "rollback_plan": "none"
+  },
+  "validator_result": {
+    "is_valid": false,
+    "errors": [
+      "[DESTRUCTIVE_COMMAND_VIOLATION] Step 2 contains forbidden command: 'rm -rf'."
+    ],
+    "warnings": []
+  }
+}
