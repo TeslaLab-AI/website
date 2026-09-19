@@ -31,6 +31,10 @@ from app.agents.agent_2.cost.budget import (
     default_budget_enforcer,
     DEFAULT_TASK_BUDGET_USD,
 )
+from app.agents.agent_2.cost.persistence import (
+    CostPersistenceService,
+    default_persistence_service,
+)
 
 __all__ = [
     "ModelPricing",
@@ -52,4 +56,6 @@ __all__ = [
     "BudgetExceededError",
     "default_budget_enforcer",
     "DEFAULT_TASK_BUDGET_USD",
+    "CostPersistenceService",
+    "default_persistence_service",
 ]
