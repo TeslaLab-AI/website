@@ -56,6 +56,7 @@ class CostPersistenceService:
             "to_state": to_state,
             "event_type": "LLM_CALL_COST",
             "payload": {
+                "session_id": record.session_id,
                 "call_id": record.call_id,
                 "model": record.model,
                 "provider": record.provider,
@@ -82,6 +83,7 @@ class CostPersistenceService:
             "to_state": "NEEDS_HUMAN",
             "event_type": cutoff.event_type,
             "payload": {
+                "session_id": cutoff.session_id,
                 "current_cost_usd": cutoff.current_cost_usd,
                 "budget_limit_usd": cutoff.budget_limit_usd,
                 "attempted_model": cutoff.attempted_model,
@@ -132,7 +134,26 @@ class CostPersistenceService:
         payload = self.format_session_summary_payload(summary)
         self.persisted_summaries.append(payload)
         self._dispatch_to_supabase("session_costs", payload)
+        self._update_event_bus_summary(summary)
         return payload
+
+    def _update_event_bus_summary(self, summary: SessionCostSummary) -> None:
+        """Update existing run state in app.agents.event_bus if tracked."""
+        try:
+            from app.agents import event_bus
+            run = event_bus.get_run(summary.session_id)
+            if run is not None:
+                run["cost_summary"] = {
+                    "total_cost_usd": summary.total_cost_usd,
+                    "total_prompt_tokens": summary.total_prompt_tokens,
+                    "total_completion_tokens": summary.total_completion_tokens,
+                    "total_cached_tokens": summary.total_cached_tokens,
+                    "total_tokens": summary.total_tokens,
+                    "call_count": summary.call_count,
+                    "status": summary.status,
+                }
+        except Exception:
+            pass
 
     def _dispatch_to_supabase(self, table: str, payload: dict[str, Any]) -> bool:
         """Helper to post event to Supabase REST API if configured."""
@@ -175,5 +196,14 @@ class CostPersistenceService:
             pass
 
 
-# Global default cost persistence service
-default_persistence_service = CostPersistenceService()
+def _default_supabase_credentials() -> tuple[str, str]:
+    """Retrieve Supabase URL and service role key from environment config if present."""
+    try:
+        from app.config import supabase_url, supabase_service_role_key
+        return supabase_url(), supabase_service_role_key()
+    except Exception:
+        return "", ""
+
+
+# Global default cost persistence service wired to environment credentials
+default_persistence_service = CostPersistenceService(supabase_client_fn=_default_supabase_credentials)

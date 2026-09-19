@@ -28,6 +28,7 @@ from app.agents.agent_2.gateway.adapters.gemini_adapter import GeminiAdapter
 from app.agents.agent_2.gateway.telemetry import GatewayTelemetry, default_telemetry
 from app.agents.agent_2.cost.tracker import CostTracker, default_cost_tracker
 from app.agents.agent_2.cost.budget import BudgetEnforcer, BudgetExceededError, default_budget_enforcer
+from app.agents.agent_2.cost.persistence import CostPersistenceService, default_persistence_service
 
 logger = logging.getLogger("llm_gateway")
 
@@ -64,6 +65,7 @@ class LLMGateway:
         telemetry: GatewayTelemetry | None = None,
         cost_tracker: CostTracker | None = None,
         budget_enforcer: BudgetEnforcer | None = None,
+        persistence_service: CostPersistenceService | None = None,
         max_retries: int = 3,
         backoff_factor: float = 0.5,
         sleep_fn: Callable[[float], None] | None = None,
@@ -72,6 +74,7 @@ class LLMGateway:
         self.telemetry = telemetry or default_telemetry
         self.cost_tracker = cost_tracker if cost_tracker is not None else default_cost_tracker
         self.budget_enforcer = budget_enforcer if budget_enforcer is not None else default_budget_enforcer
+        self.persistence_service = persistence_service if persistence_service is not None else default_persistence_service
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
         self.sleep_fn = sleep_fn or time.sleep
@@ -185,6 +188,10 @@ class LLMGateway:
                         response, session_id=session_id, cached_tokens=cached_tokens
                     )
                     response.cost_usd = cost_rec.cost_usd
+                    if self.persistence_service:
+                        self.persistence_service.persist_call_event(cost_rec)
+                        summary = self.cost_tracker.get_session_summary(session_id)
+                        self.persistence_service.persist_session_summary(summary)
                 return response
 
             except Exception as exc:
@@ -258,6 +265,10 @@ class LLMGateway:
                             fb_response, session_id=session_id, cached_tokens=cached_tokens
                         )
                         fb_response.cost_usd = fb_cost_rec.cost_usd
+                        if self.persistence_service:
+                            self.persistence_service.persist_call_event(fb_cost_rec)
+                            fb_summary = self.cost_tracker.get_session_summary(session_id)
+                            self.persistence_service.persist_session_summary(fb_summary)
                     return fb_response
 
                 except Exception as fb_exc:

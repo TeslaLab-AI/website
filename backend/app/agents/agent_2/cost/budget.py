@@ -81,9 +81,11 @@ class BudgetEnforcer:
         self,
         budget_limit_usd: float = DEFAULT_TASK_BUDGET_USD,
         calculator=None,
+        persistence_service=None,
     ) -> None:
         self.budget_limit_usd = budget_limit_usd
         self.calculator = calculator or default_calculator
+        self.persistence_service = persistence_service
         self.cutoff_events: list[BudgetCutoffEvent] = []
 
     def estimate_prompt_tokens(self, messages: Sequence[Any]) -> int:
@@ -160,7 +162,7 @@ class BudgetEnforcer:
         estimated_call_cost: float = 0.0,
         reason: str = "Budget ceiling breached",
     ) -> None:
-        """Record audit cutoff event, update tracker session status, and raise terminal error."""
+        """Record audit cutoff event, update tracker session status, persist to agent_events, and raise terminal error."""
         cutoff_event = BudgetCutoffEvent(
             session_id=session_id,
             current_cost_usd=current_cost,
@@ -172,6 +174,19 @@ class BudgetEnforcer:
 
         # Transition session to NEEDS_HUMAN
         tracker.set_session_status(session_id, "NEEDS_HUMAN")
+
+        # Persist cutoff event and updated session summary to agent_events
+        ps = self.persistence_service
+        if ps is None:
+            try:
+                from app.agents.agent_2.cost.persistence import default_persistence_service
+                ps = default_persistence_service
+            except ImportError:
+                ps = None
+        if ps:
+            ps.persist_cutoff_event(cutoff_event)
+            summary = tracker.get_session_summary(session_id)
+            ps.persist_session_summary(summary)
 
         logger.critical(
             "BUDGET ENFORCER HALT: session '%s' cutoff triggered (spent: $%.4f / limit: $%.4f). Transitioned to NEEDS_HUMAN.",

@@ -166,8 +166,9 @@ class CostTracker:
         prompt_tokens = response.usage.prompt_tokens
         completion_tokens = response.usage.completion_tokens
         # Check if response usage carries cached_tokens
-        if hasattr(response.usage, "cached_tokens"):
-            cached_tokens = getattr(response.usage, "cached_tokens", 0)
+        usage_cached = getattr(response.usage, "cached_tokens", 0)
+        if usage_cached > 0 or cached_tokens == 0:
+            cached_tokens = usage_cached
 
         record = self.record_call(
             model=response.model,
