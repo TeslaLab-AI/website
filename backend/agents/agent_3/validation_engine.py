@@ -179,7 +179,7 @@ def evaluate_repro_test(worktree_dir: str, repro_test_path: Optional[str] = None
             passed=False,
             score=0.0,
             message=f"Reproduction test ({rel_repro}) FAILED: The defect is not yet resolved.",
-            details={"output": stdout[:800], "exit_code": ret_code},
+            details={"output": stdout[-4000:] if len(stdout) > 4000 else stdout, "exit_code": ret_code},
         )
 
 
@@ -187,14 +187,31 @@ def evaluate_repro_test(worktree_dir: str, repro_test_path: Optional[str] = None
 # 4. Signal 4: Regression Test Checker
 # ─────────────────────────────────────────────────────────────────────────────
 
-def evaluate_regression_tests(worktree_dir: str, changed_files: List[str], timeout_sec: int = 45) -> CheckResult:
+def evaluate_regression_tests(
+    worktree_dir: str,
+    changed_files: List[str],
+    exclude_tests: Optional[List[str]] = None,
+    timeout_sec: int = 45,
+) -> CheckResult:
     """
     Selects impacted regression tests via AST Test Impact Analysis and executes them.
-    Asserts that 0 new regressions are introduced.
+    Asserts that 0 new regressions are introduced in existing functionality.
+    Excludes the standalone reproduction test if already covered by Signal 3.
     """
     # Use Day 1 TIA to pinpoint impacted tests
     manifest = select_impacted_tests(worktree_dir, changed_files)
     target_tests = manifest.selected_tests
+
+    # Filter out excluded tests (e.g. repro test handled by Signal 3)
+    if exclude_tests:
+        normalized_excludes = [
+            os.path.relpath(ex, worktree_dir).replace("\\", "/") if os.path.isabs(ex) else ex.replace("\\", "/")
+            for ex in exclude_tests if ex
+        ]
+        target_tests = [
+            t for t in target_tests
+            if not any(ex in t.replace("\\", "/") or t.replace("\\", "/") in ex for ex in normalized_excludes)
+        ]
 
     if not target_tests:
         return CheckResult(
@@ -222,7 +239,7 @@ def evaluate_regression_tests(worktree_dir: str, changed_files: List[str], timeo
             passed=False,
             score=0.0,
             message=f"Regression test failure: {failed} tests failed ({failed_tests}).",
-            details={"tests_run": tests_run, "passed": passed, "failed": failed, "failed_tests": failed_tests, "output": stdout[:800]},
+            details={"tests_run": tests_run, "passed": passed, "failed": failed, "failed_tests": failed_tests, "output": stdout[-4000:] if len(stdout) > 4000 else stdout},
         )
 
 
@@ -288,7 +305,11 @@ class ValidationEngine:
         c_requirements = evaluate_requirements(task_desc, targets, diff_text)
         c_diff_quality = evaluate_diff_quality(diff_text)
         c_repro = evaluate_repro_test(worktree_dir, repro_test_path)
-        c_regression = evaluate_regression_tests(worktree_dir, changes)
+        c_regression = evaluate_regression_tests(
+            worktree_dir,
+            changes,
+            exclude_tests=[repro_test_path] if repro_test_path else None,
+        )
         c_security = evaluate_security_scan(worktree_dir, diff_text)
 
         checks: Dict[str, CheckResult] = {

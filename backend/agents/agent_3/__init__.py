@@ -37,6 +37,7 @@ from .day2_models import (
 )
 
 from .validation_engine import ValidationEngine
+from .repair_agent import RepairAgent, FailureDiagnosticParser
 
 __all__ = [
     "VerificationReport",
@@ -56,4 +57,7 @@ __all__ = [
     "LoopState",
     "LoopIterationEvent",
     "ValidationEngine",
+    "RepairAgent",
+    "FailureDiagnosticParser",
 ]
+
