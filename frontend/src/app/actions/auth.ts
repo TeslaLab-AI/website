@@ -16,7 +16,11 @@ import { redirect } from 'next/navigation'
  */
 export async function signupUser(email: string, password: string, fullName: string) {
   const supabase = await createClient()
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const siteUrl = 
+    process.env.NEXT_PUBLIC_SITE_URL || 
+    (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : null) ||
+    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : null) || 
+    'http://localhost:3000'
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -25,7 +29,7 @@ export async function signupUser(email: string, password: string, fullName: stri
       data: {
         full_name: fullName,
       },
-      emailRedirectTo: `${siteUrl}/auth/callback`,
+      emailRedirectTo: `${siteUrl}/auth/confirm`,
     },
   })
 
