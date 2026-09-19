@@ -11,7 +11,8 @@ Responsibilities (Task 3):
 """
 
 from __future__ import annotations
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional
+from typing_extensions import TypedDict
 from datetime import datetime, timezone
 
 from app.contracts.schemas import SessionState
@@ -119,7 +120,7 @@ def create_session_graph():
     except ImportError:
         return None
 
-    builder = StateGraph(AgentSessionGraphState)
+    builder: StateGraph = StateGraph(AgentSessionGraphState)  # type: ignore[arg-type]
 
     def _make_node(state_enum: SessionState):
         def _node_fn(state: AgentSessionGraphState) -> AgentSessionGraphState:

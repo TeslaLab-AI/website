@@ -4,7 +4,8 @@ Module: State Models and Agent Graph Definitions (Task 1 & Task 3).
 """
 
 from __future__ import annotations
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional
+from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 
 from app.contracts.schemas import (
