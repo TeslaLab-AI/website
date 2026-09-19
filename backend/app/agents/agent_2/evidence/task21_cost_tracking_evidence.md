@@ -192,31 +192,41 @@ A failing test triggers automated replanning loops. Each attempt invokes `gpt-4o
 
 ---
 
-## 8. Full Automated Test Suite Verification (85/85 Passing)
+## 8. Database Persistence Integration (`agent_events` & Session Summary)
+
+Cost metrics and financial summaries are directly persisted into the database layer via `CostPersistenceService`:
+- **`persist_call_event`**: Persists each gateway call event to `agent_events` schema with `prompt_tokens`, `completion_tokens`, `cached_tokens`, `model`, `cost_usd`, and `session_id`.
+- **`persist_session_summary`**: Persists running cumulative session summaries to `session_costs` and updates `event_bus` run state.
+- **`persist_cutoff_event`**: Enforces terminal `$0.50` budget cutoff, records `BUDGET_EXCEEDED_CUTOFF` in `agent_events`, and transitions session lifecycle and pipeline state to `NEEDS_HUMAN`.
+- **Environment-based Credentials**: Uses `app.config.supabase_url` and `app.config.supabase_service_role_key`; safe offline fallback during unit and mock tests.
+
+---
+
+## 9. Full Automated Test Suite Verification (90/90 Passing)
 
 ```text
 ============================= test session starts =============================
 platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\kanis\Downloads\website-main\website-main\backend
-collected 85 items
+collected 90 items
 
 tests/test_agent_2_integration.py ....                                   [  4%]
-tests/test_cost_tracker.py ................                              [ 23%]
-tests/test_github_install.py ...                                         [ 27%]
-tests/test_github_repo_delete.py ....                                    [ 31%]
-tests/test_llm_gateway.py ............                                   [ 45%]
-tests/test_model_router.py .............                                 [ 61%]
-tests/test_plan_schema.py .........                                      [ 71%]
+tests/test_cost_tracker.py .....................                         [ 27%]
+tests/test_github_install.py ...                                         [ 31%]
+tests/test_github_repo_delete.py ....                                    [ 35%]
+tests/test_llm_gateway.py ............                                   [ 48%]
+tests/test_model_router.py .............                                 [ 63%]
+tests/test_plan_schema.py .........                                      [ 73%]
 tests/test_plan_validator.py .............                               [ 87%]
-tests/test_planner_agent.py .....                                        [ 92%]
+tests/test_planner_agent.py .....                                        [ 93%]
 tests/test_tool_resolver.py ......                                       [100%]
 
-============================= 85 passed in 0.62s ==============================
+============================= 90 passed in 0.60s ==============================
 ```
 
 - **Baseline & Auth Suite:** 7 passed
 - **Day 1 Plan Schema & Validator:** 37 passed
 - **Task 19 LLM Gateway:** 12 passed
 - **Task 20 Model Router v1:** 13 passed
-- **Task 21 Cost Tracking & Budget:** 16 passed
-- **Total:** **85 passed, 0 failed (100% pass rate)**
+- **Task 21 Cost Tracking & Persistence:** 21 passed
+- **Total:** **90 passed, 0 failed (100% pass rate)**

@@ -375,3 +375,212 @@ class TestCostTrackerSuite:
             )
         assert "reached hard budget limit of $0.50" in str(exc_info.value)
         assert len(mock_adp.calls) == 10  # 11th call never reached adapter!
+
+    # 17. Gateway call creates expected persistence payload
+    def test_17_gateway_call_creates_expected_persistence_payload(self) -> None:
+        mock_adp = MockAdapter(provider_name="openai", supported_models=["gpt-4o"])
+        mock_adp.preset_response = LLMResponse(
+            content="persistence payload test response",
+            model="gpt-4o",
+            provider="openai",
+            usage=TokenUsage(prompt_tokens=1500, completion_tokens=350),
+            latency_ms=45.0,
+        )
+        persistence = CostPersistenceService(dry_run=True)
+        gw = LLMGateway(
+            adapters=[mock_adp],
+            cost_tracker=self.tracker,
+            budget_enforcer=self.enforcer,
+            persistence_service=persistence,
+        )
+
+        gw.complete(
+            messages=[{"role": "user", "content": "test message"}],
+            model="gpt-4o",
+            session_id="persist_payload_session",
+            cached_tokens=250,
+        )
+
+        assert len(persistence.persisted_events) == 1
+        event = persistence.persisted_events[0]
+        assert event["session_id"] == "persist_payload_session"
+        assert event["event_type"] == "LLM_CALL_COST"
+        assert event["from_state"] == "active"
+        assert event["to_state"] == "active"
+
+        payload = event["payload"]
+        assert payload["session_id"] == "persist_payload_session"
+        assert payload["model"] == "gpt-4o"
+        assert payload["prompt_tokens"] == 1500
+        assert payload["completion_tokens"] == 350
+        assert payload["cached_tokens"] == 250
+        assert payload["cost_usd"] > 0.0
+
+    # 18. Gateway invokes persistence service after cost calculation
+    def test_18_gateway_invokes_persistence_service_after_cost_calculation(self) -> None:
+        mock_adp = MockAdapter(provider_name="openai", supported_models=["gpt-4o"])
+        mock_adp.preset_response = LLMResponse(
+            content="cost calculated response",
+            model="gpt-4o",
+            provider="openai",
+            usage=TokenUsage(prompt_tokens=2000, completion_tokens=500),
+            latency_ms=60.0,
+        )
+        persistence = CostPersistenceService(dry_run=True)
+        persistence.persist_call_event = MagicMock(wraps=persistence.persist_call_event)
+        persistence.persist_session_summary = MagicMock(wraps=persistence.persist_session_summary)
+
+        gw = LLMGateway(
+            adapters=[mock_adp],
+            cost_tracker=self.tracker,
+            budget_enforcer=self.enforcer,
+            persistence_service=persistence,
+        )
+
+        resp = gw.complete(
+            messages=[{"role": "user", "content": "analyze code"}],
+            model="gpt-4o",
+            session_id="calc_invoke_session",
+        )
+
+        # Confirm cost calculation was attached to response before persistence
+        assert resp.cost_usd > 0.0
+
+        # Confirm persistence service was invoked with the exact computed cost
+        assert persistence.persist_call_event.call_count == 1
+        call_arg = persistence.persist_call_event.call_args[0][0]
+        assert isinstance(call_arg, CostRecord)
+        assert call_arg.cost_usd == resp.cost_usd
+        assert call_arg.session_id == "calc_invoke_session"
+
+        # Confirm session summary was persisted
+        assert persistence.persist_session_summary.call_count == 1
+        summary_arg = persistence.persist_session_summary.call_args[0][0]
+        assert summary_arg.session_id == "calc_invoke_session"
+        assert summary_arg.total_cost_usd == resp.cost_usd
+
+    # 19. Session summary receives accumulated cost and token information
+    def test_19_session_summary_receives_accumulated_cost_and_token_info(self) -> None:
+        from app.agents import event_bus
+        event_bus.init_run("accum_sess_100", "finding_100", "repo_100")
+
+        mock_adp = MockAdapter(provider_name="openai", supported_models=["gpt-4o"])
+        persistence = CostPersistenceService(dry_run=True)
+        gw = LLMGateway(
+            adapters=[mock_adp],
+            cost_tracker=self.tracker,
+            budget_enforcer=self.enforcer,
+            persistence_service=persistence,
+        )
+
+        mock_adp.preset_response = LLMResponse(
+            content="call 1",
+            model="gpt-4o",
+            provider="openai",
+            usage=TokenUsage(prompt_tokens=1000, completion_tokens=200),
+            latency_ms=30.0,
+        )
+        gw.complete([{"role": "user", "content": "1"}], model="gpt-4o", session_id="accum_sess_100", cached_tokens=100)
+
+        mock_adp.preset_response = LLMResponse(
+            content="call 2",
+            model="gpt-4o",
+            provider="openai",
+            usage=TokenUsage(prompt_tokens=2000, completion_tokens=300),
+            latency_ms=40.0,
+        )
+        gw.complete([{"role": "user", "content": "2"}], model="gpt-4o", session_id="accum_sess_100", cached_tokens=200)
+
+        assert len(persistence.persisted_summaries) == 2
+        latest_summary = persistence.persisted_summaries[-1]
+        assert latest_summary["session_id"] == "accum_sess_100"
+        assert latest_summary["call_count"] == 2
+        assert latest_summary["total_prompt_tokens"] == 3000
+        assert latest_summary["total_completion_tokens"] == 500
+        assert latest_summary["total_cached_tokens"] == 300
+        assert latest_summary["total_tokens"] == 3500
+        assert latest_summary["total_cost_usd"] > 0.0
+
+        # Verify event_bus run received cost summary
+        bus_run = event_bus.get_run("accum_sess_100")
+        assert bus_run is not None
+        assert "cost_summary" in bus_run
+        assert bus_run["cost_summary"]["call_count"] == 2
+        assert bus_run["cost_summary"]["total_tokens"] == 3500
+
+    # 20. Existing $0.50 hard cutoff still blocks provider before execution with persistence
+    def test_20_existing_hard_cutoff_blocks_provider_before_execution_with_persistence(self) -> None:
+        persistence = CostPersistenceService(dry_run=True)
+        enforcer = BudgetEnforcer(budget_limit_usd=0.50, calculator=self.calculator, persistence_service=persistence)
+        mock_adp = MockAdapter(provider_name="openai", supported_models=["gpt-4o"])
+        gw = LLMGateway(
+            adapters=[mock_adp],
+            cost_tracker=self.tracker,
+            budget_enforcer=enforcer,
+            persistence_service=persistence,
+        )
+
+        # Pre-seed session with $0.50 spend
+        rec = CostRecord(
+            model="gpt-4o",
+            provider="openai",
+            prompt_tokens=100_000,
+            completion_tokens=25_000,
+            total_tokens=125_000,
+            cost_usd=0.50,
+            session_id="blocked_before_exec_sess",
+        )
+        self.tracker._records.append(rec)
+        self.tracker._session_records["blocked_before_exec_sess"] = [rec]
+
+        with pytest.raises(BudgetExceededError):
+            gw.complete(
+                messages=[{"role": "user", "content": "should never reach adapter"}],
+                model="gpt-4o",
+                session_id="blocked_before_exec_sess",
+            )
+
+        # Provider must NOT have been called
+        assert len(mock_adp.calls) == 0
+
+        # Cutoff event must be persisted to agent_events with NEEDS_HUMAN
+        cutoff_events = [e for e in persistence.persisted_events if e["event_type"] == "BUDGET_EXCEEDED_CUTOFF"]
+        assert len(cutoff_events) == 1
+        assert cutoff_events[0]["session_id"] == "blocked_before_exec_sess"
+        assert cutoff_events[0]["to_state"] == "NEEDS_HUMAN"
+        assert cutoff_events[0]["payload"]["current_cost_usd"] == 0.50
+
+    # 21. Existing NEEDS_HUMAN transition remains unchanged
+    def test_21_existing_needs_human_transition_remains_unchanged(self) -> None:
+        from app.agents import event_bus
+        event_bus.init_run("needs_human_run_77", "finding_77", "repo_77")
+
+        persistence = CostPersistenceService(dry_run=True)
+        enforcer = BudgetEnforcer(budget_limit_usd=0.50, calculator=self.calculator, persistence_service=persistence)
+
+        # Trigger cutoff via enforcer
+        with pytest.raises(BudgetExceededError) as exc_info:
+            enforcer._trigger_cutoff(
+                session_id="needs_human_run_77",
+                current_cost=0.505,
+                budget_limit=0.50,
+                model="gpt-4o",
+                tracker=self.tracker,
+                reason="Ceiling breached",
+            )
+
+        # Check terminal exception fields
+        err = exc_info.value
+        assert err.retryable is False
+        assert err.status_code == 402
+        assert err.model == "gpt-4o"
+
+        # Check tracker session status
+        assert self.tracker.get_session_status("needs_human_run_77") == "NEEDS_HUMAN"
+
+        # Check event_bus status and phase
+        run = event_bus.get_run("needs_human_run_77")
+        assert run is not None
+        assert run["status"] == "NEEDS_HUMAN"
+        assert run["phase"] == "NEEDS_HUMAN"
+        assert any("[NEEDS_HUMAN]" in log["message"] for log in run["logs"])
