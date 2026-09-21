@@ -108,6 +108,16 @@ from app.agents.agent_2.tool_registry import (
     default_registry,
     create_default_tool_registry,
 )
+from app.agents.agent_2.sandbox import (
+    CommandResult,
+    DockerSandboxDriver,
+    SubprocessFallbackSandbox,
+    Sandbox,
+    default_sandbox,
+    is_docker_available,
+    DockerUnavailableError,
+    SandboxSecurityViolationError,
+)
 
 __all__ = [
     "ALLOWED_TOOLS",
@@ -186,4 +196,12 @@ __all__ = [
     "ToolRegistry",
     "default_registry",
     "create_default_tool_registry",
+    "CommandResult",
+    "DockerSandboxDriver",
+    "SubprocessFallbackSandbox",
+    "Sandbox",
+    "default_sandbox",
+    "is_docker_available",
+    "DockerUnavailableError",
+    "SandboxSecurityViolationError",
 ]
