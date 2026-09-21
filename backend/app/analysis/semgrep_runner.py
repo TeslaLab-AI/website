@@ -105,6 +105,5 @@ def run_semgrep(target_dir: str) -> List[Dict[str, Any]]:
         return findings
         
     except Exception as e:
-        if isinstance(e, RuntimeError):
-            raise
-        raise RuntimeError(f"Error running Semgrep: {e}") from e
+        print(f"Warning: Semgrep failed or is not installed. Skipping static analysis. Error: {e}")
+        return []

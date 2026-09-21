@@ -12,9 +12,12 @@ def parse_sentry_payload(payload: Dict[str, Any]) -> BugFinding:
     event_id = payload.get("event_id") or payload.get("id") or "unknown-sentry-id"
     
     # Extract Title and Description from metadata or exception
-    exception_values = payload.get("exception", {}).get("values", [])
+    exception = payload.get("exception") or {}
+    exception_values = exception.get("values") or []
+    
     title = payload.get("title")
-    description = payload.get("metadata", {}).get("value")
+    metadata = payload.get("metadata") or {}
+    description = metadata.get("value")
     
     if not title and exception_values:
         title = exception_values[0].get("type", "UnknownException")
@@ -32,14 +35,14 @@ def parse_sentry_payload(payload: Dict[str, Any]) -> BugFinding:
     
     if exception_values:
         for exc in exception_values:
-            frames = exc.get("stacktrace", {}).get("frames", [])
+            stacktrace = exc.get("stacktrace") or {}
+            frames = stacktrace.get("frames") or []
             if frames:
                 stack_trace_lines.append(f"{exc.get('type', 'Exception')}: {exc.get('value', '')}")
                 for frame in frames:
                     filename = frame.get("filename") or frame.get("abs_path") or "unknown_file"
                     lineno = frame.get("lineno", "?")
                     func = frame.get("function", "?")
-                    module = frame.get("module", "?")
                     
                     line = f"  File \"{filename}\", line {lineno}, in {func}"
                     if frame.get("context_line"):
@@ -75,29 +78,29 @@ def parse_github_issue(issue: Dict[str, Any]) -> BugFinding:
     Extracts stack traces from markdown code blocks.
     """
     issue_id = str(issue.get("number") or issue.get("id") or "unknown-github-id")
-    title = issue.get("title", "GitHub Issue")
-    body = issue.get("body") or ""
+    title = (issue.get("title") or "").strip() or "GitHub Issue"
+    body = (issue.get("body") or "").strip() or "No description provided."
     
     # Simple regex to find python/JS/generic stack traces in markdown code blocks
     stack_trace = None
-    stack_match = re.search(r"```[a-zA-Z]*\n(Traceback.*?|.*?Error:.*?)\n```", body, re.DOTALL)
+    stack_match = re.search(r"```[a-zA-Z]*\r?\n(Traceback.*?|.*?Error:.*?)\r?\n```", body, re.DOTALL)
     if stack_match:
         stack_trace = stack_match.group(1).strip()
     else:
         # Check generic code block if it looks like a stack trace
-        generic_match = re.search(r"```\n(.*?(?:File \".*?\", line \d+|Error:|Exception).*?)\n```", body, re.DOTALL)
+        generic_match = re.search(r"```\r?\n(.*?(?:File \".*?\", line \d+|Error:|Exception).*?)\r?\n```", body, re.DOTALL)
         if generic_match:
             stack_trace = generic_match.group(1).strip()
             
     # Extract file hints from body text or stack trace
     files_hint = set()
     if stack_trace:
-        # e.g., File "src/main.py", line 10
-        file_matches = re.findall(r'File "([^"]+)"', stack_trace)
-        files_hint.update(file_matches)
+        # e.g., File "src/main.py", line 10, or JS at src/index.js:45
+        file_matches = re.findall(r'(?:File ["\']([^"\']+)["\']|at (?:[^\s(]+ \()?([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+):\d+)', stack_trace)
+        files_hint.update(f[0] or f[1] for f in file_matches if f[0] or f[1])
         
     environment = {
-        "labels": [label.get("name") for label in issue.get("labels", []) if isinstance(label, dict)],
+        "labels": [label.get("name") if isinstance(label, dict) else str(label) for label in (issue.get("labels") or []) if label],
         "state": issue.get("state"),
         "url": issue.get("html_url")
     }
@@ -127,5 +130,10 @@ def parse_freeform_text(text: str) -> BugFinding:
         temperature=0.0
     )
     
-    parsed_json = json.loads(completion.choices[0].message.content)
-    return BugFinding(**parsed_json)
+    content = completion.choices[0].message.content
+    if not content:
+        raise ValueError("OpenAI returned empty response for freeform text parsing")
+    parsed_json = json.loads(content)
+    valid_keys = set(BugFinding.model_fields.keys())
+    cleaned_json = {k: v for k, v in parsed_json.items() if k in valid_keys}
+    return BugFinding(**cleaned_json)

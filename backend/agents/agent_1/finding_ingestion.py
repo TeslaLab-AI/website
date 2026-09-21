@@ -205,11 +205,32 @@ class FindingIngestionService:
             "updated_at": now_iso,
         }
 
+        from app.evidence.collector import build_evidence_pack
+        from app.contracts.schemas import BugFinding
+        
+        # Hydrate a temporary BugFinding for the collector
+        _st = finding_info.get("stack_trace")
+        _fp = finding_info.get("file_path")
+        _env = finding_info.get("environment")
+        
+        bug_finding = BugFinding(
+            id=str(finding_info.get("id", finding_id)),
+            title=str(finding_info.get("title", "Unknown")),
+            description=str(finding_info.get("description", "Unknown")),
+            stack_trace=str(_st) if _st else None,
+            files_hint=[str(_fp)] if _fp else [],
+            environment=_env if isinstance(_env, dict) else {}
+        )
+        
+        # Build evidence pack
+        pack = build_evidence_pack(bug_finding, workspace_path=None, log_file_path=None)
+
         session_payload = {
             "id": session_id,
             "task_id": task_id,
             "workspace_id": workspace_id,
             "current_state": SessionState.INVESTIGATING.value,
+            "evidence_pack": pack.model_dump(),
             "created_at": now_iso,
             "updated_at": now_iso,
         }
