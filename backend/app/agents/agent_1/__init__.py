@@ -14,6 +14,8 @@ from backend.agents.agent_1 import (
     AgentSessionGraphState,
     TransitionRequest,
     IngestionResult,
+    AsyncEventBus,
+    event_bus,
 )
 
 __all__ = [
@@ -27,4 +29,7 @@ __all__ = [
     "AgentSessionGraphState",
     "TransitionRequest",
     "IngestionResult",
+    "AsyncEventBus",
+    "event_bus",
 ]
+
