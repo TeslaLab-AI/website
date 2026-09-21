@@ -434,27 +434,28 @@ def _handler_apply_patch(args: ApplyPatchArgs) -> dict[str, Any]:
 
 
 def _handler_run_tests(args: RunTestsArgs) -> dict[str, Any]:
-    """Execute repository test suite."""
-    return {
-        "test_command": args.test_command,
-        "timeout_seconds": args.timeout_seconds,
-        "exit_code": 0,
-        "stdout": "================ 5 passed in 0.42s ================",
-        "stderr": "",
-        "status": "passed",
-    }
+    """Execute repository test suite via Sandbox."""
+    from app.agents.agent_2.sandbox import default_sandbox
+    cmd_res = default_sandbox.execute_command(
+        cmd=args.test_command,
+        timeout=args.timeout_seconds,
+    )
+    res_dict = cmd_res.model_dump()
+    res_dict["test_command"] = args.test_command
+    res_dict["timeout_seconds"] = args.timeout_seconds
+    res_dict["status"] = "passed" if cmd_res.exit_code == 0 else "failed"
+    return res_dict
 
 
 def _handler_run_command(args: RunCommandArgs) -> dict[str, Any]:
-    """Execute shell command with timeout and isolation guardrails."""
-    return {
-        "command": args.command,
-        "timeout_seconds": args.timeout_seconds,
-        "cwd": args.cwd or ".",
-        "exit_code": 0,
-        "stdout": f"[Execution stdout]: Successfully executed '{args.command}'",
-        "stderr": "",
-    }
+    """Execute shell command with timeout and isolation guardrails via Sandbox."""
+    from app.agents.agent_2.sandbox import default_sandbox
+    cmd_res = default_sandbox.execute_command(
+        cmd=args.command,
+        timeout=args.timeout_seconds,
+        cwd=args.cwd or ".",
+    )
+    return cmd_res.model_dump()
 
 
 def _handler_open_pr(args: OpenPrArgs) -> dict[str, Any]:
