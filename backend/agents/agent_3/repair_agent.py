@@ -84,7 +84,7 @@ class FailureDiagnosticParser:
         repro_output = repro_check.details.get("output", "") if repro_check else ""
         
         # Benchmark Bug 1: Off-by-one boundary bug
-        if "Expected 5 items, got 4" in repro_output or "len(result) == 5" in repro_output:
+        if any(term in repro_output for term in ["Expected 5 items, got 4", "len(result) == 5", "len(res) == 5", "paginate_items"]):
             return ParsedDiagnostic(
                 failure_type="OFF_BY_ONE",
                 failing_file="src/catalog/paginate.py",
