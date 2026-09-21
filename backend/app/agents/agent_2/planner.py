@@ -84,10 +84,14 @@ class PlannerAgent:
         validator: PlanValidator | None = None,
         openai_client: Any = None,
         model: str = "gpt-4o",
+        router: Any = None,
+        gateway: Any = None,
     ) -> None:
         self.validator = validator or default_validator
         self.client = openai_client
         self.model = model
+        self.router = router
+        self.gateway = gateway
 
     def _get_client(self) -> Any:
         if self.client:
@@ -103,31 +107,137 @@ class PlannerAgent:
                 return None
         return None
 
-    def plan(
+    def _build_prompts(
+        self,
+        rca: RootCauseAnalysis,
+        context: ContextPack,
+    ) -> tuple[str, str]:
+        system_prompt = (
+            "You are the Lead Planning Agent in an automated code remediation system. "
+            "Given a RootCauseAnalysis and ContextPack, produce a strictly ordered, executable ExecutionPlan. "
+            "Mandatory execution ordering:\n"
+            "READ/INSPECT -> REPRODUCE -> EDIT -> TEST -> VERIFY\n"
+            "Only the following 6 tools may be used:\n"
+            "1. read_file (path, start_line, end_line)\n"
+            "2. search_code (pattern, path, regex)\n"
+            "3. apply_patch (path, original_chunk, replacement_chunk, line_number)\n"
+            "4. run_tests (test_command, timeout_seconds)\n"
+            "5. run_command (command, timeout_seconds, cwd)\n"
+            "6. open_pr (title, branch, body)\n\n"
+            "Requirements:\n"
+            "- Minimum 3 steps\n"
+            "- Every step must include step_number (1-indexed sequential), tool_name, tool_arguments, expected_outcome, rollback_action\n"
+            "- Never touch protected paths (.env, .git, .github/workflows, lockfiles)\n"
+            "- Never emit destructive commands (rm -rf, drop table, curl | sh, git push --force)\n"
+            "Return JSON matching ExecutionPlan schema."
+        )
+
+        user_prompt = (
+            f"Generate an ExecutionPlan for this issue:\n"
+            f"Title: {rca.title}\n"
+            f"File: {rca.file_path}:{rca.line_number}\n"
+            f"Description: {rca.description}\n"
+            f"Root Cause: {rca.root_cause}\n"
+            f"Suggested Fix: {rca.suggested_fix}\n"
+            f"Severity: {rca.severity}\n\n"
+            f"File Content ({rca.file_path}):\n"
+            f"{context.file_content[:3000]}\n\n"
+            f"Test Command: {context.test_command or 'pytest'}\n"
+        )
+        return system_prompt, user_prompt
+
+    def plan_with_metadata(
         self,
         rca: RootCauseAnalysis,
         context: ContextPack,
         workspace_root: str | None = None,
         max_validation_retries: int = 2,
-    ) -> ExecutionPlan:
+        router: Any = None,
+        gateway: Any = None,
+        complexity_hint: str | None = None,
+    ) -> tuple[ExecutionPlan, dict[str, Any]]:
         """
-        Generate an ExecutionPlan from RootCauseAnalysis and ContextPack.
-        The plan is guaranteed to be validated by PlanValidator before returning.
+        Execute full planning pipeline:
+        RootCauseAnalysis -> ModelRouter -> PlannerAgent -> ExecutionPlan -> PlanValidator
+        Returns (ExecutionPlan, metadata_dict).
         """
-        client = self._get_client()
+        import time
+        start_time = time.perf_counter()
 
-        # If LLM client is available, prompt the LLM
-        if client:
-            plan = self._generate_plan_with_llm(client, rca, context)
+        effective_router = router or self.router
+        effective_gateway = gateway or self.gateway
+
+        # 1. ModelRouter model selection
+        route = None
+        if effective_router is not None:
+            route = effective_router.get_model_for_task(
+                task_type="planning",
+                complexity_hint=complexity_hint,
+            )
         else:
-            # High-fidelity deterministic planner for offline/testing environments
-            plan = self._generate_deterministic_plan(rca, context)
+            try:
+                from app.agents.agent_2.router import default_router
+                route = default_router.get_model_for_task(
+                    task_type="planning",
+                    complexity_hint=rca.severity,
+                )
+            except Exception:
+                from app.agents.agent_2.router.models import ModelRoute
+                route = ModelRoute(
+                    task_type="planning",
+                    tier="strong",
+                    model=self.model,
+                    provider="openai",
+                    fallback_model="claude-3-5-sonnet",
+                    reason="Default strong planning tier",
+                )
 
-        # Static validation
-        validation_result = self.validator.validate(plan, workspace_root=workspace_root)
+        selected_model = route.model if route else self.model
+        selected_tier = route.tier if route else "strong"
+        selected_provider = route.provider if route else "openai"
+
+        # 2. Plan Generation
+        plan = None
+        llm_response = None
+
+        # Try LLMGateway if available
+        if effective_gateway is not None:
+            try:
+                system_prompt, user_prompt = self._build_prompts(rca, context)
+                llm_response = effective_gateway.complete(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    model=selected_model,
+                    temperature=0.1,
+                    max_tokens=2048,
+                    json_schema=ExecutionPlan,
+                    fallback_model=route.fallback_model if route else None,
+                )
+                if llm_response and llm_response.parsed:
+                    plan = ExecutionPlan(**llm_response.parsed)
+                elif llm_response and llm_response.content:
+                    plan = ExecutionPlan.model_validate_json(llm_response.content)
+            except Exception:
+                plan = None
+
+        # If gateway didn't produce plan, try client or deterministic
+        if plan is None:
+            client = self._get_client()
+            if client:
+                plan = self._generate_plan_with_llm(client, rca, context)
+            else:
+                plan = self._generate_deterministic_plan(rca, context)
+
+        # 3. Static Plan Validation on initial attempt
+        initial_val_result = self.validator.validate(plan, workspace_root=workspace_root)
+        first_attempt_pass = initial_val_result.is_valid
+
+        validation_result = initial_val_result
         if not validation_result.is_valid:
+            client = self._get_client()
             if client and max_validation_retries > 0:
-                # Attempt self-correction with validation error feedback
                 plan = self._replan_with_errors(client, rca, context, plan, validation_result.errors)
                 validation_result = self.validator.validate(plan, workspace_root=workspace_root)
 
@@ -135,6 +245,73 @@ class PlannerAgent:
                 error_msg = "; ".join(validation_result.errors)
                 raise ValueError(f"[PLANNER_VALIDATION_FAILED] Generated plan failed validation: {error_msg}")
 
+        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+
+        # Calculate token counts and cost
+        prompt_tokens = llm_response.usage.prompt_tokens if llm_response and llm_response.usage else 0
+        completion_tokens = llm_response.usage.completion_tokens if llm_response and llm_response.usage else 0
+        cached_tokens = llm_response.usage.cached_tokens if llm_response and llm_response.usage else 0
+
+        cost_usd = 0.0
+        if effective_gateway and effective_gateway.cost_tracker:
+            recent_records = effective_gateway.cost_tracker.get_all_records()
+            if recent_records:
+                cost_usd = recent_records[-1].cost_usd
+
+        if cost_usd == 0.0 and (prompt_tokens > 0 or completion_tokens > 0):
+            try:
+                from app.agents.agent_2.cost.calculator import default_calculator
+                breakdown = default_calculator.calculate_cost(
+                    model=selected_model,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    cached_tokens=cached_tokens,
+                )
+                cost_usd = breakdown.total_cost_usd
+            except Exception:
+                pass
+
+        metadata = {
+            "route": route,
+            "selected_tier": selected_tier,
+            "selected_model": selected_model,
+            "selected_provider": selected_provider,
+            "first_attempt_pass": first_attempt_pass,
+            "validation_result": validation_result,
+            "validation_errors": validation_result.errors,
+            "planning_latency_ms": elapsed_ms,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "cached_tokens": cached_tokens,
+            "cost_usd": cost_usd,
+            "llm_response": llm_response,
+        }
+
+        return plan, metadata
+
+    def plan(
+        self,
+        rca: RootCauseAnalysis,
+        context: ContextPack,
+        workspace_root: str | None = None,
+        max_validation_retries: int = 2,
+        router: Any = None,
+        gateway: Any = None,
+        complexity_hint: str | None = None,
+    ) -> ExecutionPlan:
+        """
+        Generate an ExecutionPlan from RootCauseAnalysis and ContextPack.
+        The plan is guaranteed to be validated by PlanValidator before returning.
+        """
+        plan, _ = self.plan_with_metadata(
+            rca=rca,
+            context=context,
+            workspace_root=workspace_root,
+            max_validation_retries=max_validation_retries,
+            router=router,
+            gateway=gateway,
+            complexity_hint=complexity_hint,
+        )
         return plan
 
     def _generate_deterministic_plan(
