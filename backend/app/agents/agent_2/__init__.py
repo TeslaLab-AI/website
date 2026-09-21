@@ -86,6 +86,18 @@ from app.agents.agent_2.cost import (
     CostPersistenceService,
     default_persistence_service,
 )
+from app.agents.agent_2.benchmarks import (
+    BenchmarkCase,
+    SEEDED_BENCHMARK_CASES,
+    get_seeded_benchmarks,
+    get_benchmark_by_id,
+)
+from app.agents.agent_2.benchmark_runner import (
+    BenchmarkCaseResult,
+    BatchRunSummary,
+    run_planner_e2e_benchmark,
+    build_benchmark_gateway,
+)
 
 __all__ = [
     "ALLOWED_TOOLS",
@@ -148,4 +160,12 @@ __all__ = [
     "default_budget_enforcer",
     "CostPersistenceService",
     "default_persistence_service",
+    "BenchmarkCase",
+    "SEEDED_BENCHMARK_CASES",
+    "get_seeded_benchmarks",
+    "get_benchmark_by_id",
+    "BenchmarkCaseResult",
+    "BatchRunSummary",
+    "run_planner_e2e_benchmark",
+    "build_benchmark_gateway",
 ]
