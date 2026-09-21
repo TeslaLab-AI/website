@@ -98,6 +98,16 @@ from app.agents.agent_2.benchmark_runner import (
     run_planner_e2e_benchmark,
     build_benchmark_gateway,
 )
+from app.agents.agent_2.tool_registry import (
+    ToolPermission,
+    ToolResult,
+    FindFilesArgs,
+    GetSymbolDefinitionArgs,
+    RegisteredTool,
+    ToolRegistry,
+    default_registry,
+    create_default_tool_registry,
+)
 
 __all__ = [
     "ALLOWED_TOOLS",
@@ -168,4 +178,12 @@ __all__ = [
     "BatchRunSummary",
     "run_planner_e2e_benchmark",
     "build_benchmark_gateway",
+    "ToolPermission",
+    "ToolResult",
+    "FindFilesArgs",
+    "GetSymbolDefinitionArgs",
+    "RegisteredTool",
+    "ToolRegistry",
+    "default_registry",
+    "create_default_tool_registry",
 ]
