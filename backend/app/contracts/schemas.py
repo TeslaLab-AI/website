@@ -95,6 +95,31 @@ class Task(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class EvidencePack(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    stack_trace: Optional[str] = Field(default=None, description="Stack trace related to the finding")
+    logs: List[str] = Field(default_factory=list, description="Relevant log lines (±50 lines around error)")
+    environment: Dict[str, Any] = Field(default_factory=dict, description="Environment metadata (Python/Node version, OS)")
+    commit_hash: str = Field(..., description="Git commit hash at time of error")
+
+class CodeChunk(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    file_path: str = Field(..., description="Path to the source file")
+    function_name: Optional[str] = Field(default=None, description="Name of the function or class block")
+    content: str = Field(..., description="Source code content")
+    start_line: int = Field(..., description="Starting line number (1-indexed)")
+    end_line: int = Field(..., description="Ending line number (1-indexed)")
+    relevance_score: float = Field(default=0.0, description="Heuristic relevance score (higher is better)")
+
+class ContextPack(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    chunks: List[CodeChunk] = Field(default_factory=list, description="Most relevant code chunks within token budget")
+    total_tokens: int = Field(default=0, description="Total tokens consumed by the context pack")
+
+
 class Session(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
@@ -102,6 +127,7 @@ class Session(BaseModel):
     task_id: str = Field(..., description="Associated task UUID")
     workspace_id: str = Field(..., description="Associated workspace UUID")
     current_state: SessionState = SessionState.CREATED
+    evidence_pack: Optional[EvidencePack] = Field(default=None, description="Collected raw evidence")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
