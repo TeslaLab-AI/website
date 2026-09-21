@@ -1,0 +1,27 @@
+{
+  "stack_trace": "Error: crash\n    at src/auth/handler.ts:42:1",
+  "logs": [
+    "[2026-09-21 10:00:01] INFO    System startup initialized.\n",
+    "[2026-09-21 10:00:02] DEBUG   Loading configuration from /etc/config.json\n",
+    "[2026-09-21 10:00:03] INFO    Database connection established.\n",
+    "[2026-09-21 10:00:04] WARN    Deprecation warning: using old API endpoints.\n",
+    "[2026-09-21 10:00:05] INFO    User 123 logged in.\n",
+    "[2026-09-21 10:00:06] DEBUG   Secret key loaded: Bearer ***\n",
+    "[2026-09-21 10:00:07] INFO    API_KEY=\"***\"\n",
+    "[2026-09-21 10:00:08] DEBUG   Fetching user profile for 123.\n",
+    "[2026-09-21 10:00:09] ERROR   FINDING-BUG-001 Null pointer dereference in auth handler\n",
+    "[2026-09-21 10:00:10] DEBUG   Stack trace follows...\n",
+    "[2026-09-21 10:00:11] DEBUG   File \"src/auth/handler.ts\", line 42\n",
+    "[2026-09-21 10:00:12] DEBUG   Session state: {\"token\": \"valid\"}\n",
+    "[2026-09-21 10:00:13] INFO    Retrying connection...\n",
+    "[2026-09-21 10:00:14] ERROR   Failed retry.\n",
+    "[2026-09-21 10:00:15] INFO    System shutdown initiated.\n",
+    "[2026-09-21 10:00:16] DEBUG   Cleaning up resources...\n",
+    "[2026-09-21 10:00:17] INFO    Shutdown complete.\n"
+  ],
+  "environment": {
+    "os": "Windows",
+    "python": "3.13"
+  },
+  "commit_hash": "abc1234"
+}

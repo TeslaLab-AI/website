@@ -1,0 +1,17 @@
+[2026-09-21 10:00:01] INFO    System startup initialized.
+[2026-09-21 10:00:02] DEBUG   Loading configuration from /etc/config.json
+[2026-09-21 10:00:03] INFO    Database connection established.
+[2026-09-21 10:00:04] WARN    Deprecation warning: using old API endpoints.
+[2026-09-21 10:00:05] INFO    User 123 logged in.
+[2026-09-21 10:00:06] DEBUG   Secret key loaded: Bearer abcdef123456
+[2026-09-21 10:00:07] INFO    API_KEY="supersecret_api_key_99"
+[2026-09-21 10:00:08] DEBUG   Fetching user profile for 123.
+[2026-09-21 10:00:09] ERROR   FINDING-BUG-001 Null pointer dereference in auth handler
+[2026-09-21 10:00:10] DEBUG   Stack trace follows...
+[2026-09-21 10:00:11] DEBUG   File "src/auth/handler.ts", line 42
+[2026-09-21 10:00:12] DEBUG   Session state: {"token": "valid"}
+[2026-09-21 10:00:13] INFO    Retrying connection...
+[2026-09-21 10:00:14] ERROR   Failed retry.
+[2026-09-21 10:00:15] INFO    System shutdown initiated.
+[2026-09-21 10:00:16] DEBUG   Cleaning up resources...
+[2026-09-21 10:00:17] INFO    Shutdown complete.
