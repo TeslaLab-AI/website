@@ -1,0 +1,21 @@
+{
+  "finding_id": "SEC-SQLI-DAY3-EVIDENCE",
+  "cwe": "CWE-89",
+  "target_file": "src/db/user_repo.py",
+  "line_number": 3,
+  "pre_remediation": {
+    "sast_scanner": "AST-SAST & Diff Security Gate",
+    "findings_count": 1,
+    "vulnerability": "CWE-89 SQL Injection via dynamic f-string execution",
+    "code_snippet": "cursor.execute(f\"SELECT * FROM users WHERE tier = '{tier_name}'\")"
+  },
+  "post_remediation": {
+    "sast_scanner": "AST-SAST & Diff Security Gate",
+    "findings_count": 0,
+    "status": "0 Vulnerabilities (CLEAN)",
+    "sast_passed": true,
+    "code_snippet": "cursor.execute(\"SELECT * FROM users WHERE tier = ?\", (tier_name,))"
+  },
+  "outcome": "REMEDIATED",
+  "timestamp": "2026-09-21T06:47:40Z"
+}

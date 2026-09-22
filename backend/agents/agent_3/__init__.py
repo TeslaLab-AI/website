@@ -36,9 +36,20 @@ from .day2_models import (
     LoopIterationEvent,
 )
 
+from .day3_models import (
+    PRManifest,
+    DependencyFinding,
+    DependencyPlan,
+    SecurityRemediationReport,
+)
+
 from .validation_engine import ValidationEngine
 from .repair_agent import RepairAgent, FailureDiagnosticParser
 from .autonomous_loop import AutonomousRepairLoop, compute_diff_hash
+from .pr_generator import generate_pr_markdown, build_pr_manifest
+from .github_pr_client import GitHubPRClient, ClosedLoopPipeline
+from .dependency_agent import DependencyAgent, DependencyInspector, BreakingChangeAnalyzer
+from .security_remediation import SecurityRemediator
 
 __all__ = [
     "VerificationReport",
@@ -57,11 +68,27 @@ __all__ = [
     "RepairPlan",
     "LoopState",
     "LoopIterationEvent",
+    "PRManifest",
+    "DependencyFinding",
+    "DependencyPlan",
+    "SecurityRemediationReport",
     "ValidationEngine",
     "RepairAgent",
     "FailureDiagnosticParser",
     "AutonomousRepairLoop",
     "compute_diff_hash",
+    "generate_pr_markdown",
+    "build_pr_manifest",
+    "GitHubPRClient",
+    "ClosedLoopPipeline",
+    "DependencyAgent",
+    "DependencyInspector",
+    "BreakingChangeAnalyzer",
+    "SecurityRemediator",
 ]
+
+
+
+
 
 
