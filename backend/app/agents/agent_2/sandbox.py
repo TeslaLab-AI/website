@@ -151,7 +151,14 @@ class DockerSandboxDriver:
             args.extend(["--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m"])
 
         if cwd:
-            args.extend(["-w", cwd])
+            norm_cwd = cwd.replace("\\", "/")
+            if norm_cwd in (".", "./", ""):
+                norm_cwd = "/"
+            elif len(norm_cwd) >= 2 and norm_cwd[1] == ":":
+                norm_cwd = norm_cwd[2:]
+            if not norm_cwd.startswith("/"):
+                norm_cwd = f"/{norm_cwd}"
+            args.extend(["-w", norm_cwd])
 
         args.extend([self.base_image, "sh", "-c", cmd])
         return args

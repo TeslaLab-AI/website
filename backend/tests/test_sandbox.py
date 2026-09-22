@@ -20,6 +20,7 @@ Does not fake Docker when Docker is unavailable.
 from __future__ import annotations
 
 import json
+import subprocess
 import pytest
 from pydantic import ValidationError
 
@@ -366,3 +367,39 @@ class TestDockerLiveAcceptance:
         assert limits["max_cpus"] == 2.0
         assert limits["network_mode"] == "none"
         assert limits["read_only_root"] is True
+
+    def test_live_docker_nonzero_and_stderr(self):
+        driver = DockerSandboxDriver()
+        res = driver.execute_command(
+            'python -c "import sys; sys.stderr.write(\'live_docker_err\\n\'); sys.exit(42)"',
+            timeout=10,
+        )
+        assert res.exit_code == 42
+        assert "live_docker_err" in res.stderr
+        assert res.is_isolated is True
+        assert res.timed_out is False
+
+    def test_live_docker_readonly_filesystem(self):
+        driver = DockerSandboxDriver()
+        res = driver.execute_command("touch /cant_write_to_root", timeout=10)
+        assert res.exit_code != 0
+        assert "read-only" in (res.stdout + res.stderr).lower()
+
+    def test_live_docker_container_cleanup(self):
+        driver = DockerSandboxDriver()
+        res = driver.execute_command("python --version", timeout=10)
+        assert res.container_id is not None
+        inspect_res = subprocess.run(
+            ["docker", "inspect", res.container_id],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        assert inspect_res.returncode != 0, f"Container {res.container_id} was not cleaned up after execution"
+
+    def test_live_docker_ephemeral_lifecycle(self):
+        driver = DockerSandboxDriver()
+        res1 = driver.execute_command("touch /tmp/ephemeral_test_file", timeout=10)
+        assert res1.exit_code == 0
+        res2 = driver.execute_command("ls /tmp/ephemeral_test_file", timeout=10)
+        assert res2.exit_code != 0
+        assert res1.container_id != res2.container_id
