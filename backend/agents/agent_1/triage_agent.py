@@ -15,10 +15,8 @@ class TriageAgent:
     """
     
     def __init__(self, model_name: str = "gpt-4o-mini", temperature: float = 0.0):
-        # We explicitly use gpt-4o-mini to meet the <10s latency requirement
-        self.model_name = model_name
+        # The model_name is now resolved via the ModelRouter, but we accept it for backwards compatibility
         self.temperature = temperature
-        self.client = openai.OpenAI()
 
     def run_triage(self, finding: BugFinding, evidence: Optional[EvidencePack] = None) -> TriageReport:
         """Runs the triage classification."""
@@ -44,22 +42,25 @@ class TriageAgent:
         
         user_prompt = f"Bug Finding:\n{finding_json}\n\nEvidence Pack:\n{evidence_json}"
         
-        response = self.client.beta.chat.completions.parse(
-            model=self.model_name,
-            temperature=self.temperature,
+        from app.agents.agent_2.router.router import default_router
+        response = default_router.complete(
+            task_type="triage",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            response_format=TriageReport,
+            temperature=self.temperature,
+            json_schema=TriageReport,
+            session_id=finding.id,
         )
         
-        result = response.choices[0].message.parsed
+        result = response.parsed
         
         if result is None:
             raise ValueError("Failed to parse TriageReport from LLM output")
+            
+        result = TriageReport(**result)
         
         duration = time.time() - start_time
         logger.info(f"Triage completed in {duration:.2f}s for Bug: {finding.id}. Feasible: {result.auto_fix_feasible}")
-        
         return result

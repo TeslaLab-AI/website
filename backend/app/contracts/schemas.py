@@ -50,7 +50,7 @@ class TriageReport(BaseModel):
     
     is_reproducible: bool = Field(..., description="Whether the bug has enough info to be reproducible")
     subsystem: str = Field(..., description="The subsystem this bug belongs to (e.g., auth, database, frontend)")
-    severity: TriageSeverity = Field(..., description="Assessed severity (P0-P3)")
+    severity: TriageSeverity
     estimated_complexity: str = Field(..., description="Estimation of complexity (e.g., low, medium, high)")
     auto_fix_feasible: bool = Field(..., description="Whether autonomous fixing is feasible")
     reason: str = Field(..., description="Reasoning for feasibility and severity")
