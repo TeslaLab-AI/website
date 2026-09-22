@@ -423,7 +423,25 @@ def _handler_get_symbol_definition(args: GetSymbolDefinitionArgs) -> dict[str, A
 
 
 def _handler_apply_patch(args: ApplyPatchArgs) -> dict[str, Any]:
-    """Apply replacement chunk to target file."""
+    """Apply replacement chunk to target file using precision CodeModifier."""
+    from app.agents.agent_2.code_modifier import default_code_modifier
+    if os.path.exists(args.path):
+        mod_res = default_code_modifier.replace_chunk(
+            file_path=args.path,
+            original_chunk=args.original_chunk,
+            replacement_chunk=args.replacement_chunk,
+            line_number=args.line_number,
+        )
+        if not mod_res.success:
+            raise RuntimeError(mod_res.error or "Code modification failed.")
+        return {
+            "path": args.path,
+            "line_number": args.line_number,
+            "bytes_replaced": mod_res.original_bytes,
+            "bytes_written": mod_res.new_bytes,
+            "status": "applied",
+            "replaced_lines": mod_res.replaced_lines,
+        }
     return {
         "path": args.path,
         "line_number": args.line_number,
