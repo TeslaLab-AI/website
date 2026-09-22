@@ -1,6 +1,6 @@
 # Task 26: Executor Agent v1 — Verification & Evidence Report
 
-**Generated**: 2026-09-22T10:45:27.719848+00:00
+**Generated**: 2026-09-22T15:22:30.240970+00:00
 **Agent**: Agent 2 (Engineer 2) — Stage 0 Day 4
 **Task**: TASK 26 — EXECUTOR AGENT v1
 
@@ -58,7 +58,7 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
 ```json
 [
   {
-    "id": "599f9afe-8997-4d18-9b8a-9065f57272f4",
+    "id": "01dbcf5b-8b91-4aac-8fc1-1d45b6017c14",
     "session_id": "sess-evidence-success",
     "from_state": "EXECUTING",
     "to_state": "EXECUTING",
@@ -68,12 +68,12 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
       "tool_name": "read_file",
       "expected_outcome": "Read original compute_tax function",
       "attempts_taken": 1,
-      "execution_time_ms": 18.073
+      "execution_time_ms": 12.432
     },
-    "timestamp": "2026-09-22 10:45:26.063132+00:00"
+    "timestamp": "2026-09-22 15:22:25.748918+00:00"
   },
   {
-    "id": "95c0b135-8c2b-4923-8aa8-a397c0ee2128",
+    "id": "0c7d645a-1249-4de8-bb07-6991183803b8",
     "session_id": "sess-evidence-success",
     "from_state": "EXECUTING",
     "to_state": "EXECUTING",
@@ -81,13 +81,13 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
     "payload": {
       "step_number": 2,
       "tool_name": "apply_patch",
-      "target": "C:\\Users\\kanis\\AppData\\Local\\Temp\\task26_evidence_repo_dxgwn7_8\\.worktrees\\wt_task-evidence-success\\service.py",
+      "target": "C:\\Users\\kanis\\AppData\\Local\\Temp\\task26_evidence_repo_xz37ett3\\.worktrees\\wt_task-evidence-success\\service.py",
       "status": "modified"
     },
-    "timestamp": "2026-09-22 10:45:26.064127+00:00"
+    "timestamp": "2026-09-22 15:22:25.761931+00:00"
   },
   {
-    "id": "dd6501c7-d4a7-43e5-ac1e-768a6ab755e2",
+    "id": "e4666b3e-59f2-48e9-a547-b183bfc32c95",
     "session_id": "sess-evidence-success",
     "from_state": "EXECUTING",
     "to_state": "EXECUTING",
@@ -97,12 +97,12 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
       "tool_name": "apply_patch",
       "expected_outcome": "Patch tax calculation to 15%",
       "attempts_taken": 1,
-      "execution_time_ms": 0.132
+      "execution_time_ms": 12.433
     },
-    "timestamp": "2026-09-22 10:45:26.064127+00:00"
+    "timestamp": "2026-09-22 15:22:25.761931+00:00"
   },
   {
-    "id": "19f79f3f-7db0-4178-8340-4041acc6208c",
+    "id": "b9a15632-016d-47a6-b81c-2d3c8f5c082a",
     "session_id": "sess-evidence-success",
     "from_state": "EXECUTING",
     "to_state": "EXECUTING",
@@ -112,9 +112,9 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
       "tool_name": "run_command",
       "expected_outcome": "Verify tax logic output",
       "attempts_taken": 1,
-      "execution_time_ms": 204.539
+      "execution_time_ms": 963.839
     },
-    "timestamp": "2026-09-22 10:45:26.268596+00:00"
+    "timestamp": "2026-09-22 15:22:26.727035+00:00"
   }
 ]
 ```
@@ -134,7 +134,7 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
 ```json
 [
   {
-    "id": "3c33d420-3f42-493e-8a85-280e8e718f87",
+    "id": "db26333a-f9d3-4aee-8958-33a81b769a05",
     "session_id": "sess-evidence-recovery",
     "from_state": "EXECUTING",
     "to_state": "EXECUTING",
@@ -144,12 +144,12 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
       "tool_name": "read_file",
       "expected_outcome": "Inspect file",
       "attempts_taken": 1,
-      "execution_time_ms": 1.469
+      "execution_time_ms": 1.097
     },
-    "timestamp": "2026-09-22 10:45:26.590604+00:00"
+    "timestamp": "2026-09-22 15:22:26.954848+00:00"
   },
   {
-    "id": "4213d514-d0aa-4945-bbd1-43d603b9f1e9",
+    "id": "20578f5f-1382-4ca8-9fa7-9edc9c7c4027",
     "session_id": "sess-evidence-recovery",
     "from_state": "EXECUTING",
     "to_state": "EXECUTING",
@@ -159,9 +159,9 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
       "tool_name": "run_command",
       "expected_outcome": "Command recovers on retry",
       "attempts_taken": 2,
-      "execution_time_ms": 134.734
+      "execution_time_ms": 877.255
     },
-    "timestamp": "2026-09-22 10:45:26.727262+00:00"
+    "timestamp": "2026-09-22 15:22:27.833207+00:00"
   }
 ]
 ```
@@ -187,7 +187,7 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
 ```json
 [
   {
-    "id": "c7f624ab-ded9-42b4-a62f-ecf9ab9d3038",
+    "id": "78432474-6f05-412f-a56c-02fb04338e87",
     "session_id": "sess-evidence-hardfail",
     "from_state": "EXECUTING",
     "to_state": "EXECUTING",
@@ -197,12 +197,12 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
       "tool_name": "read_file",
       "expected_outcome": "Step 1 succeeds",
       "attempts_taken": 1,
-      "execution_time_ms": 2.761
+      "execution_time_ms": 1.254
     },
-    "timestamp": "2026-09-22 10:45:27.005223+00:00"
+    "timestamp": "2026-09-22 15:22:28.059180+00:00"
   },
   {
-    "id": "5debafde-9a68-4ac9-a857-f587c1998cb7",
+    "id": "bf840aae-88df-4e40-b825-0edaa0b16738",
     "session_id": "sess-evidence-hardfail",
     "from_state": "EXECUTING",
     "to_state": "REPAIRING",
@@ -214,7 +214,7 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
       "retries_exhausted": 2,
       "rollback_triggered": true
     },
-    "timestamp": "2026-09-22 10:45:27.169849+00:00"
+    "timestamp": "2026-09-22 15:22:28.193068+00:00"
   }
 ]
 ```
@@ -222,5 +222,7 @@ GitWorkspaceManager.checkout(task_name)  ---> Creates task/<name> worktree
 ---
 
 ## 5. Docker Dependency Status
-- Non-Docker and fallback execution paths verified.
-- Live Docker tests explicitly deferred/skipped when host Docker daemon is unavailable, in compliance with cross-task non-fabrication rules.
+- **Docker Available on Host**: `YES (Active & Verified)`
+- **Live Docker Execution**: `VERIFIED - Commands executed in isolated ephemeral containers`
+- **Container Output**: `{'exit_code': 0, 'stdout': 'EXECUTOR_LIVE_DOCKER_CONTAINER_VERIFIED\n', 'stderr': '', 'duration_ms': 502.37, 'timed_out': False, 'driver': 'docker', 'is_isolated': True, 'command': 'python -c "print(\'EXECUTOR_LIVE_DOCKER_CONTAINER_VERIFIED\')"', 'container_id': 'teslalab_sbx_113c15b77e6f', 'resource_limits': {'max_cpus': 2.0, 'max_memory_bytes': 4294967296, 'max_memory_human': '4GB', 'max_timeout_seconds': 120, 'network_mode': 'none', 'read_only_root': True, 'is_isolated': True, 'driver': 'docker'}}`
+- **Isolation Guarantees**: Max 2.0 CPUs, 4GB RAM, 120s timeout, `--network none` network isolation, ephemeral container teardown.

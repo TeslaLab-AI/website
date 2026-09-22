@@ -39,6 +39,7 @@ from app.agents.agent_2.executor import (
     ExecutionStatus,
     MAX_RETRIES_PER_STEP,
 )
+from app.agents.agent_2.sandbox import is_docker_available
 from app.contracts.schemas import AgentEventType
 
 
@@ -419,10 +420,60 @@ class TestExecutorAgentAcceptance:
         assert res.step_retries[1] == 1
         assert len(res.completed_steps) == 1
 
-    @pytest.mark.skipif(True, reason="Docker daemon is not available on host. Live container execution deferred.")
     def test_06_docker_live_sandbox_execution(self, test_repo_and_workspace):
         """
-        Placeholder test explicitly marking live Docker execution as skipped
-        when Docker daemon is absent, adhering to cross-task non-fabrication rules.
+        Live Docker execution test: Executes a command inside real Docker sandbox
+        via ExecutorAgent and ToolRegistry.
         """
-        pass
+        if not is_docker_available():
+            pytest.skip("Docker daemon is not available on host.")
+
+        _, mgr = test_repo_and_workspace
+        registry = create_default_tool_registry()
+
+        plan = ExecutionPlan(
+            goal="Execute command inside isolated Docker container via Executor",
+            affected_files=[],
+            estimated_complexity="Low",
+            rollback_plan="None",
+            steps=[
+                PlanStep(
+                    step_number=1,
+                    tool_name="run_command",
+                    tool_arguments=RunCommandArgs(
+                        command="python -c \"print('EXECUTOR_DOCKER_LIVE_OK')\"",
+                        timeout_seconds=30,
+                    ),
+                    expected_outcome="Command runs inside ephemeral Docker container",
+                    rollback_action="None",
+                )
+            ],
+        )
+
+        emitted_events = []
+        executor = ExecutorAgent(
+            tool_registry=registry,
+            workspace_manager=mgr,
+            event_callback=lambda evt: emitted_events.append(evt),
+        )
+
+        res = executor.execute_plan(
+            plan=plan,
+            session_id="session-docker-live-001",
+            task_name="task-docker-live",
+        )
+
+        assert res.status == ExecutionStatus.SUCCESS
+        assert len(res.completed_steps) == 1
+        assert res.completed_steps[0].step_number == 1
+        assert res.total_retries == 0
+
+        # Verify tool result confirms live Docker driver
+        step_output = res.completed_steps[0].output
+        assert "docker" in step_output
+        assert "'is_isolated': True" in step_output or "is_isolated=True" in step_output
+        assert "EXECUTOR_DOCKER_LIVE_OK" in step_output
+
+        # Verify event was emitted
+        event_types = [e.event_type for e in emitted_events]
+        assert "STEP_COMPLETED" in event_types
