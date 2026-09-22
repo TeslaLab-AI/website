@@ -69,6 +69,17 @@ from .unified_pipeline import (
     CommonPRNode,
 )
 
+from .manual_controls import ManualControlSession
+from .solution_memory import (
+
+    SolutionMemoryStore,
+    SolutionIndexer,
+    MemoryRetriever,
+    ContextBuilder,
+    compute_text_embedding,
+    cosine_similarity,
+)
+
 __all__ = [
     "VerificationReport",
     "TestImpactManifest",
@@ -117,7 +128,16 @@ __all__ = [
     "CommonTestingNode",
     "CommonValidationNode",
     "CommonPRNode",
+    "ManualControlSession",
+    "SolutionMemoryStore",
+    "SolutionIndexer",
+    "MemoryRetriever",
+    "ContextBuilder",
+    "compute_text_embedding",
+    "cosine_similarity",
 ]
+
+
 
 
 
