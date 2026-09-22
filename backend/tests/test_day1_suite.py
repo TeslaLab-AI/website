@@ -209,7 +209,7 @@ def test_ac_e1_d1_02_idempotent_finding_ingestion():
     # First pass: ingest each of the 6 seeded findings
     for fid in seeded_ids:
         resp = client.post(f"/findings/{fid}/investigate")
-        assert resp.status_code == 200, f"Failed on {fid}: {resp.text}"
+        assert resp.status_code == 202, f"Failed on {fid}: {resp.text}"
         data = resp.json()
         assert "task_id" in data
         assert "session_id" in data
@@ -227,7 +227,7 @@ def test_ac_e1_d1_02_idempotent_finding_ingestion():
     # Second pass: simulate rapid double-clicks on identical findings
     for fid in seeded_ids:
         resp_double = client.post(f"/findings/{fid}/investigate")
-        assert resp_double.status_code == 200
+        assert resp_double.status_code == 202
         data_double = resp_double.json()
 
         # Must return the EXACT SAME task_id and session_id with is_existing=True
@@ -248,7 +248,7 @@ def test_ac_e1_d1_03_session_state_machine_progression():
     """
     # 1. Create a session via investigate
     resp = client.post("/findings/FINDING-BUG-001/investigate")
-    assert resp.status_code == 200
+    assert resp.status_code == 202
     session_id = resp.json()["session_id"]
 
     # 2. Transition sequentially through 3 additional states
