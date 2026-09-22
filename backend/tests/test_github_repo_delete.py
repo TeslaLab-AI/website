@@ -4,6 +4,16 @@ from fastapi import HTTPException
 from app.github_api import remove_repository
 
 class TestRemoveRepository(unittest.TestCase):
+    def setUp(self):
+        self.env_patcher = patch.dict("os.environ", {
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "test-service-key",
+        })
+        self.env_patcher.start()
+
+    def tearDown(self):
+        self.env_patcher.stop()
+
     def test_remove_repository_missing_auth(self):
         with self.assertRaises(HTTPException) as ctx:
             remove_repository("repo-123", authorization=None)
