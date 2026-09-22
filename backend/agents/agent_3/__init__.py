@@ -43,13 +43,42 @@ from .day3_models import (
     SecurityRemediationReport,
 )
 
+from .day4_models import (
+    FindingCategory,
+    UnifiedFinding,
+    FindingContext,
+    ManualAction,
+    ManualControlCommand,
+    MemoryRecord,
+    ContextPack,
+)
+
 from .validation_engine import ValidationEngine
 from .repair_agent import RepairAgent, FailureDiagnosticParser
 from .autonomous_loop import AutonomousRepairLoop, compute_diff_hash
 from .pr_generator import generate_pr_markdown, build_pr_manifest
 from .github_pr_client import GitHubPRClient, ClosedLoopPipeline
 from .dependency_agent import DependencyAgent, DependencyInspector, BreakingChangeAnalyzer
-from .security_remediation import SecurityRemediator
+from .unified_pipeline import (
+    UnifiedFindingPipeline,
+    SpecialistAnalysisAdapter,
+    CommonPlanner,
+    CommonExecutor,
+    CommonTestingNode,
+    CommonValidationNode,
+    CommonPRNode,
+)
+
+from .manual_controls import ManualControlSession
+from .solution_memory import (
+
+    SolutionMemoryStore,
+    SolutionIndexer,
+    MemoryRetriever,
+    ContextBuilder,
+    compute_text_embedding,
+    cosine_similarity,
+)
 
 __all__ = [
     "VerificationReport",
@@ -72,6 +101,13 @@ __all__ = [
     "DependencyFinding",
     "DependencyPlan",
     "SecurityRemediationReport",
+    "FindingCategory",
+    "UnifiedFinding",
+    "FindingContext",
+    "ManualAction",
+    "ManualControlCommand",
+    "MemoryRecord",
+    "ContextPack",
     "ValidationEngine",
     "RepairAgent",
     "FailureDiagnosticParser",
@@ -85,7 +121,24 @@ __all__ = [
     "DependencyInspector",
     "BreakingChangeAnalyzer",
     "SecurityRemediator",
+    "UnifiedFindingPipeline",
+    "SpecialistAnalysisAdapter",
+    "CommonPlanner",
+    "CommonExecutor",
+    "CommonTestingNode",
+    "CommonValidationNode",
+    "CommonPRNode",
+    "ManualControlSession",
+    "SolutionMemoryStore",
+    "SolutionIndexer",
+    "MemoryRetriever",
+    "ContextBuilder",
+    "compute_text_embedding",
+    "cosine_similarity",
 ]
+
+
+
 
 
 
