@@ -58,7 +58,7 @@ Respond with a JSON object with exactly these fields:
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1,
     )
-    data = json.loads(res.choices[0].message.content)
+    data = json.loads(res.choices[0].message.content or "{}")
     return TriageResult(
         agent="bug",
         problem=data.get("problem", ""),
@@ -106,7 +106,7 @@ Respond with a JSON object:
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1,
     )
-    data = json.loads(res.choices[0].message.content)
+    data = json.loads(res.choices[0].message.content or "{}")
     return TriageResult(
         agent="security",
         problem=data.get("problem", ""),
@@ -145,7 +145,7 @@ Respond with a JSON object:
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1,
     )
-    data = json.loads(res.choices[0].message.content)
+    data = json.loads(res.choices[0].message.content or "{}")
     return TriageResult(
         agent="dependency",
         problem=data.get("problem", ""),
