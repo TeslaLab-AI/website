@@ -57,3 +57,59 @@ class DiagnosisAgent:
     def start_investigation(self, finding_id: str) -> Dict[str, Any]:
         """Ingests the finding and initiates the 13-state session."""
         return self.ingestion_service.ingest(finding_id, self.workspace_id)
+
+    def execute_investigation(self, finding_id: str, session_id: str) -> Dict[str, Any]:
+        """Runs the LangGraph session end-to-end for the given finding."""
+        ingest_result = self.start_investigation(finding_id)
+        
+        finding_info = self.ingestion_service.get_seeded_findings()
+        finding_dict = next((f for f in finding_info if f["id"] == finding_id), None)
+        if not finding_dict:
+            # Fallback for dynamic test findings
+            finding_dict = {
+                "id": finding_id,
+                "category": "bugs",
+                "severity": "medium",
+                "title": f"Dynamic Test Finding {finding_id}",
+                "description": "Auto-generated finding for testing",
+                "file_path": "src/index.ts",
+                "line_number": 1
+            }
+            
+        from app.contracts.schemas import BugFinding
+        from app.evidence.collector import build_evidence_pack
+        
+        _st = finding_dict.get("stack_trace")
+        _fp = finding_dict.get("file_path")
+        _env = finding_dict.get("environment", {})
+        
+        bug_finding = BugFinding(
+            id=finding_id,
+            title=str(finding_dict.get("title", "Unknown")),
+            description=str(finding_dict.get("description", "Unknown")),
+            stack_trace=str(_st) if _st else None,
+            files_hint=[str(_fp)] if _fp else [],
+            environment=_env if isinstance(_env, dict) else {}
+        )
+        
+        pack = build_evidence_pack(bug_finding, workspace_path=None, log_file_path=None)
+        
+        initial_state = {
+            "session_id": session_id,
+            "task_id": ingest_result["task_id"],
+            "workspace_id": self.workspace_id,
+            "current_state": SessionState.CREATED.value,
+            "history": [],
+            "error": None,
+            "bug_finding": bug_finding.model_dump(),
+            "evidence_pack": pack.model_dump(),
+            "triage_report": None,
+            "root_cause_analysis": None,
+            "hypotheses": None
+        }
+        
+        if not self.graph:
+            raise RuntimeError("Graph could not be compiled (LangGraph missing?)")
+            
+        final_state = self.graph.invoke(initial_state)
+        return final_state

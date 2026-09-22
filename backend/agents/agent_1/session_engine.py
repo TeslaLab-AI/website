@@ -109,8 +109,11 @@ class AgentSessionGraphState(TypedDict):
     current_state: str
     history: List[Dict[str, Any]]
     error: Optional[str]
+    bug_finding: Dict[str, Any]
+    evidence_pack: Dict[str, Any]
     triage_report: Optional[Dict[str, Any]]
     root_cause_analysis: Optional[Dict[str, Any]]
+    hypotheses: Optional[List[Dict[str, Any]]]
 
 
 def create_session_graph():
@@ -140,8 +143,107 @@ def create_session_graph():
             }
         return _node_fn
 
+    def _triage_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from agents.agent_1.triage_agent import TriageAgent
+        from app.contracts.schemas import BugFinding, EvidencePack, SessionState, AgentEventType
+        from agents.agent_1.event_bus import event_bus
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.TRIAGED.value, "timestamp": now_iso})
+        
+        event_bus.emit_sync(
+            session_id=state["session_id"],
+            event_type=AgentEventType.SEARCHING_REPOSITORY,
+            payload={"finding_id": state.get("bug_finding", {}).get("id")},
+            from_state=SessionState.CREATED,
+            to_state=SessionState.TRIAGED
+        )
+        
+        finding = BugFinding(**state["bug_finding"])
+        evidence = EvidencePack(**state["evidence_pack"]) if state.get("evidence_pack") else None
+        
+        agent = TriageAgent()
+        report = agent.run_triage(finding, evidence)
+        
+        return {
+            **state,
+            "current_state": SessionState.TRIAGED.value,
+            "history": history,
+            "triage_report": report.model_dump()
+        }
+
+    def _root_cause_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from agents.agent_1.root_cause_agent import RootCauseAgent
+        from app.contracts.schemas import BugFinding, EvidencePack, SessionState, AgentEventType
+        from agents.agent_1.event_bus import event_bus
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.ROOT_CAUSE.value, "timestamp": now_iso})
+        
+        event_bus.emit_sync(
+            session_id=state["session_id"],
+            event_type=AgentEventType.READING_FILE,
+            payload={"file": state["bug_finding"].get("file_path", "unknown")},
+            from_state=SessionState.REPRODUCING,
+            to_state=SessionState.ROOT_CAUSE
+        )
+        
+        finding = BugFinding(**state["bug_finding"])
+        evidence = EvidencePack(**state["evidence_pack"]) if state.get("evidence_pack") else None
+        strategy = state.get("triage_report", {}).get("reason", "")
+        
+        agent = RootCauseAgent()
+        rca = agent.analyze(finding, evidence, strategy)
+        
+        return {
+            **state,
+            "current_state": SessionState.ROOT_CAUSE.value,
+            "history": history,
+            "root_cause_analysis": rca.model_dump()
+        }
+
+    def _planning_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from agents.agent_1.hypothesis_engine import HypothesisEngine
+        from app.contracts.schemas import BugFinding, SessionState, AgentEventType
+        from agents.agent_1.event_bus import event_bus
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.PLANNING.value, "timestamp": now_iso})
+        
+        event_bus.emit_sync(
+            session_id=state["session_id"],
+            event_type=AgentEventType.HYPOTHESIS_GENERATED,
+            payload={"message": "Generating hypotheses from root cause."},
+            from_state=SessionState.ROOT_CAUSE,
+            to_state=SessionState.PLANNING
+        )
+        
+        finding = BugFinding(**state["bug_finding"])
+        rca = state.get("root_cause_analysis", {})
+        rca_text = rca.get("explanation", "")
+        
+        engine = HypothesisEngine()
+        hypotheses = engine.generate_hypotheses(finding, rca_text)
+        
+        return {
+            **state,
+            "current_state": SessionState.PLANNING.value,
+            "history": history,
+            "hypotheses": [h.model_dump() for h in hypotheses]
+        }
+
     for s in SessionState:
-        builder.add_node(s.value, _make_node(s))
+        if s == SessionState.TRIAGED:
+            builder.add_node(s.value, _triage_node)
+        elif s == SessionState.ROOT_CAUSE:
+            builder.add_node(s.value, _root_cause_node)
+        elif s == SessionState.PLANNING:
+            builder.add_node(s.value, _planning_node)
+        else:
+            builder.add_node(s.value, _make_node(s))
 
     # Entry point connects to CREATED
     builder.add_edge(START, SessionState.CREATED.value)

@@ -10,39 +10,12 @@ def run_investigation_task(self, session_id: str, finding_id: str, workspace_id:
     Background worker task to run the investigation pipeline.
     """
     try:
-        # Simulate investigation process for Task 5 Worker Resilience test
+        from agents.agent_1.diagnosis_agent import DiagnosisAgent
         
-        # INVESTIGATING -> REPRODUCING
-        time.sleep(1)
-        event_bus.emit_sync(
-            session_id=session_id,
-            event_type=AgentEventType.SEARCHING_REPOSITORY,
-            payload={"query": "find bug", "finding_id": finding_id},
-            from_state=SessionState.INVESTIGATING,
-            to_state=SessionState.REPRODUCING
-        )
+        agent = DiagnosisAgent(workspace_id=workspace_id)
+        final_state = agent.execute_investigation(finding_id=finding_id, session_id=session_id)
         
-        # REPRODUCING -> ROOT_CAUSE
-        time.sleep(1)
-        event_bus.emit_sync(
-            session_id=session_id,
-            event_type=AgentEventType.READING_FILE,
-            payload={"file": "simulated_file.ts"},
-            from_state=SessionState.REPRODUCING,
-            to_state=SessionState.ROOT_CAUSE
-        )
-
-        # ROOT_CAUSE -> PLANNING
-        time.sleep(1)
-        event_bus.emit_sync(
-            session_id=session_id,
-            event_type=AgentEventType.HYPOTHESIS_GENERATED,
-            payload={"hypothesis": "Simulated root cause found by Celery background worker."},
-            from_state=SessionState.ROOT_CAUSE,
-            to_state=SessionState.PLANNING
-        )
-        
-        return {"status": "success", "session_id": session_id}
+        return {"status": "success", "session_id": session_id, "final_state_node": final_state.get("current_state")}
         
     except Exception as exc:
         try:
