@@ -12,7 +12,7 @@ Strategy:
 from __future__ import annotations
 from dataclasses import dataclass
 
-from app.agents.triage_agents import TriageResult
+from app.agents.agent_1.triage_agents import TriageResult
 
 
 @dataclass

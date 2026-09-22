@@ -461,7 +461,7 @@ class TestCostTrackerSuite:
 
     # 19. Session summary receives accumulated cost and token information
     def test_19_session_summary_receives_accumulated_cost_and_token_info(self) -> None:
-        from app.agents import event_bus
+        from app.agents.agent_1 import pipeline_event_bus as event_bus
         event_bus.init_run("accum_sess_100", "finding_100", "repo_100")
 
         mock_adp = MockAdapter(provider_name="openai", supported_models=["gpt-4o"])
@@ -552,7 +552,7 @@ class TestCostTrackerSuite:
 
     # 21. Existing NEEDS_HUMAN transition remains unchanged
     def test_21_existing_needs_human_transition_remains_unchanged(self) -> None:
-        from app.agents import event_bus
+        from app.agents.agent_1 import pipeline_event_bus as event_bus
         event_bus.init_run("needs_human_run_77", "finding_77", "repo_77")
 
         persistence = CostPersistenceService(dry_run=True)

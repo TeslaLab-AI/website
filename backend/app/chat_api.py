@@ -120,7 +120,7 @@ def chat_with_repo(request: ChatRequest, authorization: str | None = Header(defa
             ],
             temperature=0.3
         )
-        reply = chat_res.choices[0].message.content
+        reply = chat_res.choices[0].message.content or ""
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate AI reply: {str(e)}")
 

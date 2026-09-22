@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 import asyncio
-from fastapi import APIRouter, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Header, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -75,6 +75,7 @@ def get_seeded_findings():
 @router.post("/api/findings/{finding_id}/investigate")
 def investigate_finding(
     finding_id: str,
+    background_tasks: BackgroundTasks,
     authorization: str | None = Header(default=None),
 ):
     """
@@ -86,8 +87,14 @@ def investigate_finding(
     session_id = result.get("session_id")
     if session_id:
         from app.tasks import run_investigation_task
-        async_result = run_investigation_task.delay(session_id, finding_id, workspace_id)
-        result["celery_task_id"] = async_result.id
+        import os
+        if os.name == 'nt':
+            # Local Windows MVP dev fallback to avoid Redis/Celery dependency blocking
+            background_tasks.add_task(run_investigation_task, session_id, finding_id, workspace_id)
+            result["celery_task_id"] = "local-background-task"
+        else:
+            async_result = run_investigation_task.delay(session_id, finding_id, workspace_id)
+            result["celery_task_id"] = async_result.id
 
     from fastapi.responses import JSONResponse
     return JSONResponse(status_code=202, content=result)

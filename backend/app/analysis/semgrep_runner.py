@@ -23,18 +23,31 @@ def run_semgrep(target_dir: str) -> List[Dict[str, Any]]:
     # - p/default: standard bugs and code quality
     # - p/security-audit: security vulnerabilities (OWASP, CWE)
     # - p/supply-chain: dependency and package vulnerabilities (CVEs)
-    cmd = [
-        "semgrep", "scan",
-        "--config", "p/default",
-        "--config", "p/security-audit",
-        "--config", "p/supply-chain",
-        "--json",
-        target_dir
-    ]
-    
+    is_windows = os.name == 'nt'
+    if is_windows:
+        abs_target = os.path.abspath(target_dir)
+        cmd = [
+            "docker", "run", "--rm",
+            "-v", f"{abs_target}:/src",
+            "returntocorp/semgrep", "semgrep", "scan",
+            "--config", "p/default",
+            "--config", "p/security-audit",
+            "--config", "p/supply-chain",
+            "--json",
+            "/src"
+        ]
+    else:
+        cmd = [
+            "semgrep", "scan",
+            "--config", "p/default",
+            "--config", "p/security-audit",
+            "--config", "p/supply-chain",
+            "--json",
+            target_dir
+        ]
+        
     try:
-        # Use shell=True on Windows if semgrep is a .cmd/.exe wrapper in the Scripts folder
-        is_windows = os.name == 'nt'
+        # Use shell=True on Windows if semgrep is a .cmd/.exe wrapper in the Scripts folder (not needed for docker though, but harmless)
         try:
             result = subprocess.run(
                 cmd, 
@@ -89,8 +102,10 @@ def run_semgrep(target_dir: str) -> List[Dict[str, Any]]:
                 category = "security"
                 
             file_path = result_item.get("path", "")
-            # Make path relative to target_dir if possible
-            if file_path.startswith(target_dir):
+            # Make path relative to target_dir if possible (or /src if docker)
+            if file_path.startswith("/src/"):
+                file_path = file_path[5:]
+            elif file_path.startswith(target_dir):
                 file_path = os.path.relpath(file_path, target_dir)
                 
             findings.append({

@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "C:\Users\ACER\Desktop\gaurav intern\website\backend\app\session_api.py", line 89, in investigate_finding
+    from app.tasks import run_investigation_task
+  File "C:\Users\ACER\Desktop\gaurav intern\website\backend\app\tasks.py", line 3, in <module>
+    from app.celery_app import celery_app
+  File "C:\Users\ACER\Desktop\gaurav intern\website\backend\app\celery_app.py", line 2, in <module>
+    from celery import Celery
+ModuleNotFoundError: No module named 'celery'

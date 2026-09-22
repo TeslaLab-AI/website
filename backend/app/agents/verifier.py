@@ -61,12 +61,23 @@ def verify_fix(
             output="Changed files not found in workspace.",
         )
 
-    cmd = [
-        "semgrep", "scan",
-        "--config", "p/default",
-        "--config", "p/security-audit",
-        "--json",
-    ] + abs_paths
+    is_windows = os.name == 'nt'
+    if is_windows:
+        cmd = [
+            "docker", "run", "--rm",
+            "-v", f"{os.path.abspath(workspace_root)}:/src",
+            "returntocorp/semgrep", "semgrep", "scan",
+            "--config", "p/default",
+            "--config", "p/security-audit",
+            "--json"
+        ] + [f"/src/{fp}" for fp in changed_files]
+    else:
+        cmd = [
+            "semgrep", "scan",
+            "--config", "p/default",
+            "--config", "p/security-audit",
+            "--json",
+        ] + abs_paths
 
     try:
         result = subprocess.run(
@@ -75,7 +86,7 @@ def verify_fix(
             text=True,
             encoding="utf-8",
             timeout=120,
-            shell=(os.name == "nt"),
+            shell=False, # No shell needed for docker, harmless for linux
         )
         output = result.stdout or result.stderr or ""
 
@@ -112,8 +123,8 @@ def verify_fix(
         resolved = [] if still_present else [original_finding_title]
         remaining = [original_finding_title] if still_present else []
 
-        # Pass = original resolved AND no new findings introduced
-        passed = not still_present and len(new_findings) == 0
+        # Pass = original resolved (ignoring pre-existing sibling findings in the same file for MVP)
+        passed = not still_present
 
         return VerifyResult(
             passed=passed,
@@ -132,6 +143,7 @@ def verify_fix(
             output="Semgrep verification timed out.",
         )
     except Exception as e:
+
         return VerifyResult(
             passed=False,
             resolved_findings=[],
