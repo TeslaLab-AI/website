@@ -24,6 +24,8 @@ from agents.agent_1.finding_ingestion import (
     SEEDED_FINDINGS,
 )
 from agents.agent_1.diagnosis_agent import DiagnosisAgent
+from agents.agent_1.triage_agent import TriageAgent
+from agents.agent_1.root_cause_agent import RootCauseAgent, CitationValidationError
 
 from agents.agent_1.event_bus import (
     AsyncEventBus,
@@ -32,6 +34,9 @@ from agents.agent_1.event_bus import (
 
 __all__ = [
     "DiagnosisAgent",
+    "TriageAgent",
+    "RootCauseAgent",
+    "CitationValidationError",
     "FindingIngestionService",
     "SEEDED_FINDINGS",
     "validate_transition",
