@@ -1,6 +1,6 @@
 # Task 25: GitWorkspaceManager — Verification & Evidence Report
 
-**Generated**: 2026-09-22T10:42:25.903549+00:00
+**Generated**: 2026-09-22T15:09:01.338173+00:00
 **Agent**: Agent 2 (Engineer 2) — Stage 0 Day 4
 **Task**: TASK 25 — GitWorkspaceManager
 
@@ -37,7 +37,7 @@ The `GitWorkspaceManager` uses native Git worktrees (`git worktree`) to provide 
 ### 2.1 Workspace Creation & Checkout
 - **Task Name**: `fix-auth-token`
 - **Branch Created**: `task/fix-auth-token`
-- **Worktree Path**: `C:\Users\kanis\AppData\Local\Temp\task25_evidence_repo_2yfupo4u\.worktrees\wt_fix-auth-token`
+- **Worktree Path**: `C:\Users\kanis\AppData\Local\Temp\task25_evidence_repo_la2std61\.worktrees\wt_fix-auth-token`
 - **Base Ref**: `HEAD`
 - **Initial Status**: Clean
 
@@ -68,7 +68,7 @@ index 0000000..abccce8
 ```
 
 ### 2.3 Commit Output
-- **Commit Hash**: `f1145faff9683f78da86d4731d7cef7c20fa2428`
+- **Commit Hash**: `172cd4130c302099985903d2f4b01d08fe4eb181`
 - **Branch**: `task/fix-auth-token`
 - **Message**: `fix(auth): update token verification`
 - **Files Committed**: `app/core.py, tests/test_auth.py`
