@@ -86,6 +86,38 @@ from app.agents.agent_2.cost import (
     CostPersistenceService,
     default_persistence_service,
 )
+from app.agents.agent_2.benchmarks import (
+    BenchmarkCase,
+    SEEDED_BENCHMARK_CASES,
+    get_seeded_benchmarks,
+    get_benchmark_by_id,
+)
+from app.agents.agent_2.benchmark_runner import (
+    BenchmarkCaseResult,
+    BatchRunSummary,
+    run_planner_e2e_benchmark,
+    build_benchmark_gateway,
+)
+from app.agents.agent_2.tool_registry import (
+    ToolPermission,
+    ToolResult,
+    FindFilesArgs,
+    GetSymbolDefinitionArgs,
+    RegisteredTool,
+    ToolRegistry,
+    default_registry,
+    create_default_tool_registry,
+)
+from app.agents.agent_2.sandbox import (
+    CommandResult,
+    DockerSandboxDriver,
+    SubprocessFallbackSandbox,
+    Sandbox,
+    default_sandbox,
+    is_docker_available,
+    DockerUnavailableError,
+    SandboxSecurityViolationError,
+)
 
 __all__ = [
     "ALLOWED_TOOLS",
@@ -148,4 +180,28 @@ __all__ = [
     "default_budget_enforcer",
     "CostPersistenceService",
     "default_persistence_service",
+    "BenchmarkCase",
+    "SEEDED_BENCHMARK_CASES",
+    "get_seeded_benchmarks",
+    "get_benchmark_by_id",
+    "BenchmarkCaseResult",
+    "BatchRunSummary",
+    "run_planner_e2e_benchmark",
+    "build_benchmark_gateway",
+    "ToolPermission",
+    "ToolResult",
+    "FindFilesArgs",
+    "GetSymbolDefinitionArgs",
+    "RegisteredTool",
+    "ToolRegistry",
+    "default_registry",
+    "create_default_tool_registry",
+    "CommandResult",
+    "DockerSandboxDriver",
+    "SubprocessFallbackSandbox",
+    "Sandbox",
+    "default_sandbox",
+    "is_docker_available",
+    "DockerUnavailableError",
+    "SandboxSecurityViolationError",
 ]
