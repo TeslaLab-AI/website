@@ -93,7 +93,12 @@ from .evaluation_engine import (
     SessionTelemetryRecord,
 )
 
+from .autonomous_trigger import (
+    AutonomousTriggerEngine,
+)
+
 __all__ = [
+
 
     "VerificationReport",
     "TestImpactManifest",
@@ -157,7 +162,9 @@ __all__ = [
     "DemoScenario",
     "EvaluationEngine",
     "SessionTelemetryRecord",
+    "AutonomousTriggerEngine",
 ]
+
 
 
 
