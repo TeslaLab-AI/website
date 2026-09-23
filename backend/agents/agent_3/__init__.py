@@ -71,13 +71,21 @@ from .unified_pipeline import (
 
 from .manual_controls import ManualControlSession
 from .solution_memory import (
-
     SolutionMemoryStore,
     SolutionIndexer,
     MemoryRetriever,
     ContextBuilder,
     compute_text_embedding,
     cosine_similarity,
+)
+
+from .day5_models import (
+    EvaluationMetrics,
+    AutonomousTriggerPayload,
+    TriggerSessionState,
+    TriggerSession,
+    BenchmarkThresholdAudit,
+    DemoScenario,
 )
 
 __all__ = [
@@ -135,7 +143,14 @@ __all__ = [
     "ContextBuilder",
     "compute_text_embedding",
     "cosine_similarity",
+    "EvaluationMetrics",
+    "AutonomousTriggerPayload",
+    "TriggerSessionState",
+    "TriggerSession",
+    "BenchmarkThresholdAudit",
+    "DemoScenario",
 ]
+
 
 
 

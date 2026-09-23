@@ -98,6 +98,30 @@ class BugSpecialistAnalyzer(BaseSpecialistAnalyzer):
 """
             return diagnosis, suggested_fix, diff
 
+        elif fid == "BUG-SLUG-HYPHEN-04" or defect_type == "SANITIZATION":
+            diagnosis = "Sanitizer fails to replace spaces with hyphens in slug."
+            suggested_fix = "Add .replace(' ', '-') to sanitize_slug return statement."
+            diff = """--- a/src/utils/sanitizer.py
++++ b/src/utils/sanitizer.py
+@@ -2,2 +2,2 @@
+ def sanitize_slug(text: str) -> str:
+-    return text.strip().lower()
++    return text.strip().lower().replace(" ", "-")
+"""
+            return diagnosis, suggested_fix, diff
+
+        elif fid == "BUG-CHECKOUT-TOTAL-05" or defect_type == "REGRESSION":
+            diagnosis = "Checkout process_cart returns 0.0, failing cart total calculation."
+            suggested_fix = "Return total + calculate_fee(total) in process_cart."
+            diff = """--- a/src/payment/checkout.py
++++ b/src/payment/checkout.py
+@@ -4,2 +4,2 @@
+ def process_cart(total: float) -> float:
+-    return 0.0
++    return total + calculate_fee(total)
+"""
+            return diagnosis, suggested_fix, diff
+
         # Generic bug fallback
         return (
             f"Generic bug diagnosed in {finding.target_files}",
@@ -140,6 +164,17 @@ class DependencySpecialistAnalyzer(BaseSpecialistAnalyzer):
 """
             return diagnosis, suggested_fix, diff
 
+        elif fid == "DEP-LODASH-03" or pkg == "lodash":
+            diagnosis = "CVE-2020-8203: Prototype pollution vulnerability in lodash < 4.17.21."
+            suggested_fix = "Bump lodash version from 4.17.19 to 4.17.21 in package.json."
+            diff = """--- a/package.json
++++ b/package.json
+@@ -4,3 +4,3 @@
+-    "lodash": "4.17.19"
++    "lodash": "4.17.21"
+"""
+            return diagnosis, suggested_fix, diff
+
         return (
             f"Dependency upgrade diagnosed for {pkg}",
             f"Bump {pkg} to target version",
@@ -165,11 +200,23 @@ class SecuritySpecialistAnalyzer(BaseSpecialistAnalyzer):
 """
             return diagnosis, suggested_fix, diff
 
+        elif fid == "SEC-HARDCODED-JWT-02" or cwe == "CWE-798":
+            diagnosis = "CWE-798: Use of hard-coded cryptographic credentials in JWT authenticator."
+            suggested_fix = "Load JWT_SECRET dynamically from os.environ.get('JWT_SECRET')."
+            diff = """--- a/src/auth/jwt.py
++++ b/src/auth/jwt.py
+@@ -3,2 +3,2 @@
+-JWT_SECRET = "sk_live_9948271038472910482910"
++JWT_SECRET = os.environ.get("JWT_SECRET", "default_secret")
+"""
+            return diagnosis, suggested_fix, diff
+
         return (
             f"Security vulnerability {cwe} diagnosed in {finding.target_files}",
             "Apply security sanitization or parameterized patch",
             f"# Security remediation patch for {finding.finding_id}",
         )
+
 
 
 class SpecialistAnalysisAdapter:
