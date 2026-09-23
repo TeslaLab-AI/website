@@ -1,0 +1,233 @@
+{
+  "benchmark_repository": "repo_stage0_benchmark",
+  "timestamp": "2026-09-23T10:21:50Z",
+  "total_findings_evaluated": 10,
+  "all_thresholds_met": true,
+  "threshold_evaluations": {
+    "investigation_success_gt_80pct": true,
+    "reproduction_success_gt_70pct": true,
+    "plan_success_gt_70pct": true,
+    "execution_success_gt_60pct": true,
+    "false_positive_rate_lt_15pct": true,
+    "end_to_end_latency_lt_600s": true,
+    "cost_per_task_lt_1dollar": true
+  },
+  "threshold_metrics": {
+    "investigation_success_rate": 1.0,
+    "reproduction_success_rate": 1.0,
+    "plan_success_rate": 1.0,
+    "execution_success_rate": 1.0,
+    "false_positive_rate": 0.0,
+    "e2e_latency_sec": 1.56,
+    "cost_per_task_usd": 0.0355,
+    "thresholds_met": {
+      "investigation_success_gt_80pct": true,
+      "reproduction_success_gt_70pct": true,
+      "plan_success_gt_70pct": true,
+      "execution_success_gt_60pct": true,
+      "false_positive_rate_lt_15pct": true,
+      "end_to_end_latency_lt_600s": true,
+      "cost_per_task_lt_1dollar": true
+    },
+    "all_thresholds_met": true,
+    "audited_at": "2026-09-23T10:21:50Z"
+  },
+  "findings_breakdown": [
+    {
+      "finding_id": "BUG-PAGINATE-01",
+      "category": "BUG",
+      "title": "Off-by-one boundary calculation in catalog pagination slice",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/bug-paginate-01"
+    },
+    {
+      "finding_id": "BUG-ZERO-FEE-02",
+      "category": "BUG",
+      "title": "Fee calculator returns negative value on zero amount",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/bug-zero-fee-02"
+    },
+    {
+      "finding_id": "BUG-BOOL-FLAG-03",
+      "category": "BUG",
+      "title": "Inverted boolean validation in auth token checker",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/bug-bool-flag-03"
+    },
+    {
+      "finding_id": "BUG-SLUG-HYPHEN-04",
+      "category": "BUG",
+      "title": "Slug sanitizer fails to replace spaces with hyphens",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/bug-slug-hyphen-04"
+    },
+    {
+      "finding_id": "BUG-CHECKOUT-TOTAL-05",
+      "category": "BUG",
+      "title": "Checkout cart calculation returns 0.0 total",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/bug-checkout-total-05"
+    },
+    {
+      "finding_id": "DEP-REQ-01",
+      "category": "DEPENDENCY",
+      "title": "CVE-2023-32681: Outdated requests 2.25.1 vulnerability",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/dep-req-01"
+    },
+    {
+      "finding_id": "DEP-PYD-02",
+      "category": "DEPENDENCY",
+      "title": "Pydantic V1 -> V2 breaking API upgrade",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/dep-pyd-02"
+    },
+    {
+      "finding_id": "DEP-LODASH-03",
+      "category": "DEPENDENCY",
+      "title": "CVE-2020-8203: Prototype pollution in lodash < 4.17.21",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/dep-lodash-03"
+    },
+    {
+      "finding_id": "SEC-SQLI-01",
+      "category": "SECURITY",
+      "title": "CWE-89: SQL Injection in user tier query",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/sec-sqli-01"
+    },
+    {
+      "finding_id": "SEC-HARDCODED-JWT-02",
+      "category": "SECURITY",
+      "title": "CWE-798: Hardcoded secret key in JWT authenticator",
+      "stage": "COMPLETE",
+      "verdict": "PASS",
+      "score": 1.0,
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "pr_branch": "fix/sec-hardcoded-jwt-02"
+    }
+  ],
+  "metrics_summary": {
+    "task_success_rate": 1.0,
+    "root_cause_accuracy": 1.0,
+    "plan_validity_rate": 1.0,
+    "first_pass_fix_rate": 1.0,
+    "repair_convergence_rate": 1.0,
+    "regression_rate": 0.0,
+    "time_to_pr_sec": 1.56,
+    "cost_per_task_usd": 0.0355,
+    "token_efficiency": 0.8667,
+    "human_intervention_rate": 0.0,
+    "total_tasks": 10,
+    "tasks_passed": 10,
+    "benchmark_repo": "repo_stage0_benchmark",
+    "generated_at": "2026-09-23T10:21:50Z"
+  }
+}
