@@ -17,6 +17,10 @@ def test_git_history_agent_extraction():
     
     # Assert
     assert context is not None
+    
+    print("\n--- GIT HISTORY PAYLOAD ---")
+    print(context.model_dump_json(indent=2))
+    print("---------------------------\n")
     assert len(context.introducing_commit) >= 7
     assert context.author != "Unknown"
     assert context.date != "Unknown"
