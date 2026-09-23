@@ -119,6 +119,18 @@ from app.agents.agent_2.sandbox import (
     SandboxSecurityViolationError,
 )
 
+from app.agents.tester import (
+    TestRunner,
+    TestSuiteResult,
+    TestFailure,
+)
+from app.agents.agent_2.execution_safety import (
+    ExecutionSafety,
+    SafetyViolationError,
+    SafetyViolation,
+    GuardType,
+)
+
 __all__ = [
     "ALLOWED_TOOLS",
     "AllowedToolName",
@@ -204,4 +216,11 @@ __all__ = [
     "is_docker_available",
     "DockerUnavailableError",
     "SandboxSecurityViolationError",
+    "TestRunner",
+    "TestSuiteResult",
+    "TestFailure",
+    "ExecutionSafety",
+    "SafetyViolationError",
+    "SafetyViolation",
+    "GuardType",
 ]

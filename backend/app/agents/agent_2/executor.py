@@ -46,6 +46,12 @@ from app.agents.agent_2.git_workspace import (
     WorkspaceSession,
     default_workspace_manager,
 )
+from app.agents.agent_2.execution_safety import (
+    ExecutionSafety,
+    SafetyViolationError,
+    SafetyViolation,
+    GuardType,
+)
 from app.contracts.schemas import (
     AgentEvent,
     AgentEventType,
@@ -63,6 +69,7 @@ class ExecutionStatus(str, Enum):
     NEEDS_REPAIR = "NEEDS_REPAIR"
     FAILED = "FAILED"
     IN_PROGRESS = "IN_PROGRESS"
+    NEEDS_HUMAN = "NEEDS_HUMAN"
 
 
 class ExecutorResult(BaseModel):
@@ -92,11 +99,13 @@ class ExecutorAgent:
         tool_registry: Optional[ToolRegistry] = None,
         workspace_manager: Optional[GitWorkspaceManager] = None,
         sandbox: Optional[Sandbox] = None,
+        execution_safety: Optional[ExecutionSafety] = None,
         event_callback: Optional[Callable[[AgentEvent], Any]] = None,
     ) -> None:
         self.tool_registry = tool_registry or default_registry
         self.workspace_manager = workspace_manager or default_workspace_manager
         self.sandbox = sandbox or default_sandbox
+        self.execution_safety = execution_safety or ExecutionSafety()
         self.event_callback = event_callback
 
     def _emit_event(
@@ -161,15 +170,17 @@ class ExecutorAgent:
         task_name: Optional[str] = None,
         workspace_session: Optional[WorkspaceSession] = None,
         custom_retry_hook: Optional[Callable[[PlanStep, int, ToolResult], Optional[Dict[str, Any]]]] = None,
+        execution_safety: Optional[ExecutionSafety] = None,
     ) -> ExecutorResult:
         """
         Execute a validated ExecutionPlan sequentially.
 
         Flow:
-        Read next step -> dispatch tool -> receive ToolResult -> evaluate result -> continue OR retry
+        Read next step -> safety check -> dispatch tool -> safety check -> evaluate result -> continue OR retry
         """
         active_session_id = session_id or f"session-{uuid.uuid4().hex[:8]}"
         active_task_name = task_name or f"task-exec-{uuid.uuid4().hex[:8]}"
+        safety = execution_safety or self.execution_safety or ExecutionSafety()
 
         # 1. Initialize or acquire workspace if requested
         ws: Optional[WorkspaceSession] = workspace_session
@@ -196,6 +207,29 @@ class ExecutorAgent:
             step_success = False
             last_tool_result: Optional[ToolResult] = None
             current_args = self._prepare_tool_args_for_workspace(step, ws_path)
+
+            # Runtime Safety Guard Interceptor (Pre-Step)
+            try:
+                safety.intercept_pre_step(
+                    workspace_root=ws_path,
+                    tool_name=tool_name,
+                    step_number=step_num,
+                    args=current_args,
+                )
+            except SafetyViolationError as sve:
+                logger.error("ExecutionSafety PRE-STEP violation on step %d: %s", step_num, sve)
+                overall_status = ExecutionStatus.NEEDS_HUMAN
+                failed_step = step
+                errors.append(str(sve))
+                self._emit_event(
+                    session_id=active_session_id,
+                    event_type="SAFETY_VIOLATION",
+                    payload=sve.violation.to_dict(),
+                    from_state=SessionState.EXECUTING,
+                    to_state=SessionState.NEEDS_HUMAN,
+                    events_log=emitted_events,
+                )
+                break
 
             attempt = 0
             while attempt <= MAX_RETRIES_PER_STEP:
@@ -233,6 +267,29 @@ class ExecutorAgent:
                             error=err_text.strip(),
                             execution_time_ms=tool_result.execution_time_ms,
                         )
+
+                # Runtime Safety Guard Interceptor (Post-Step)
+                try:
+                    safety.intercept_post_step(
+                        workspace_root=ws_path,
+                        tool_name=tool_name,
+                        args=current_args,
+                        step_succeeded=step_succeeded,
+                    )
+                except SafetyViolationError as sve:
+                    logger.error("ExecutionSafety POST-STEP violation on step %d: %s", step_num, sve)
+                    overall_status = ExecutionStatus.NEEDS_HUMAN
+                    failed_step = step
+                    errors.append(str(sve))
+                    self._emit_event(
+                        session_id=active_session_id,
+                        event_type="SAFETY_VIOLATION",
+                        payload=sve.violation.to_dict(),
+                        from_state=SessionState.EXECUTING,
+                        to_state=SessionState.NEEDS_HUMAN,
+                        events_log=emitted_events,
+                    )
+                    break
 
                 if step_succeeded:
                     step_success = True
@@ -301,6 +358,10 @@ class ExecutorAgent:
                         break
 
             # 3. Handle Step Outcome
+            if overall_status == ExecutionStatus.NEEDS_HUMAN:
+                # Safety violation occurred: execution halts immediately, preserving evidence
+                break
+
             if not step_success:
                 # HARD FAILURE on this step
                 failed_step = step
