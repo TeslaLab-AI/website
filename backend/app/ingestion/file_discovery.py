@@ -77,11 +77,23 @@ def chunk_file_content(file_path: str, max_tokens: int = 1500) -> list[dict]:
     if ast_chunks:
         print(f"AST Parser: Extracted {len(ast_chunks)} semantic chunks from {Path(file_path).name}")
         chunks = []
+        MAX_AST_CHUNK_SIZE = 24000
         for chunk_text in ast_chunks:
-            chunks.append({
-                "content": chunk_text,
-                "language": ext.lstrip('.')
-            })
+            if len(chunk_text) > MAX_AST_CHUNK_SIZE:
+                # Sub-chunk massive AST nodes to prevent OpenAI BadRequestError
+                start = 0
+                while start < len(chunk_text):
+                    end = start + MAX_AST_CHUNK_SIZE
+                    chunks.append({
+                        "content": chunk_text[start:end],
+                        "language": ext.lstrip('.')
+                    })
+                    start += (MAX_AST_CHUNK_SIZE - 500)
+            else:
+                chunks.append({
+                    "content": chunk_text,
+                    "language": ext.lstrip('.')
+                })
         return chunks
         
     # Fallback naive chunking (character based) for Phase 1 or unsupported languages

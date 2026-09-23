@@ -83,103 +83,107 @@ def perform_real_scan(scan_id: str, repository_id: str, workspace_id: str, owner
         update_progress(scan_id, "ingesting", 10, f"Downloading repository tarball for {owner}/{repo} @ {branch}...")
         repo_root = download_and_extract_repo(owner, repo, token, branch)
         
-        update_progress(scan_id, "ingesting", 20, "Discovering source code files...")
-        files = discover_files(repo_root)
-        
-        update_progress(scan_id, "ingesting", 30, f"Found {len(files)} files. Chunking content...")
-        all_chunks = []
-        for f in files:
-            chunks = chunk_file_content(f)
-            # Add file path to each chunk
-            for c in chunks:
-                c["file_path"] = f.replace(repo_root, "").lstrip("/\\")
-            all_chunks.extend(chunks)
+        try:
+            update_progress(scan_id, "ingesting", 20, "Discovering source code files...")
+            files = discover_files(repo_root)
             
-        update_progress(scan_id, "ingesting", 40, f"Discovered {len(files)} files, produced {len(all_chunks)} chunks.")
-        
-        # Phase 3: Embeddings & Storage (renaming to Analyzing phase for UI simplicity)
-        if all_chunks:
-            texts = [c["content"] for c in all_chunks]
-            update_progress(scan_id, "analyzing", 50, "Generating AI embeddings for code chunks...")
-            embeddings = generate_embeddings(texts)
+            update_progress(scan_id, "ingesting", 30, f"Found {len(files)} files. Chunking content...")
+            all_chunks = []
+            for f in files:
+                chunks = chunk_file_content(f)
+                # Add file path to each chunk
+                for c in chunks:
+                    c["file_path"] = f.replace(repo_root, "").lstrip("/\\")
+                all_chunks.extend(chunks)
+                
+            update_progress(scan_id, "ingesting", 40, f"Discovered {len(files)} files, produced {len(all_chunks)} chunks.")
             
-            update_progress(scan_id, "analyzing", 60, "Saving snapshot and chunks to vector database...")
-            commit_sha = f"{branch}-latest"
-            
-            # Fetch existing snapshot to avoid constraint violation and duplicate chunks
-            status, body = _json_request(
-                f"{supabase_url()}/rest/v1/repository_snapshots?repository_id=eq.{repository_id}&commit_sha=eq.{commit_sha}&select=id",
-                headers
-            )
-            
-            if status == 200 and isinstance(body, list) and len(body) > 0:
-                snapshot_id = str(body[0]["id"])
-                # Clear existing chunks for this snapshot to prevent duplicates
-                _json_request(
-                    f"{supabase_url()}/rest/v1/code_chunks?snapshot_id=eq.{snapshot_id}",
-                    headers,
-                    method="DELETE"
-                )
-            else:
-                snapshot_id = str(uuid.uuid4())
-                _json_post(
-                    f"{supabase_url()}/rest/v1/repository_snapshots",
-                    headers,
-                    payload={
-                        "id": snapshot_id,
-                        "repository_id": repository_id,
-                        "workspace_id": workspace_id,
-                        "commit_sha": commit_sha
-                    }
-                )
-            
-            # 2. Insert chunks
-            for chunk, emb in zip(all_chunks, embeddings):
-                _json_post(
-                    f"{supabase_url()}/rest/v1/code_chunks",
-                    headers,
-                    payload={
-                        "snapshot_id": snapshot_id,
-                        "file_path": chunk["file_path"],
-                        "content": chunk["content"],
-                        "language": chunk["language"],
-                        "embedding": emb
-                    }
+            # Phase 3: Embeddings & Storage (renaming to Analyzing phase for UI simplicity)
+            if all_chunks:
+                texts = [c["content"] for c in all_chunks]
+                update_progress(scan_id, "analyzing", 50, "Generating AI embeddings for code chunks...")
+                embeddings = generate_embeddings(texts)
+                
+                update_progress(scan_id, "analyzing", 60, "Saving snapshot and chunks to vector database...")
+                commit_sha = f"{branch}-latest"
+                
+                # Fetch existing snapshot to avoid constraint violation and duplicate chunks
+                status, body = _json_request(
+                    f"{supabase_url()}/rest/v1/repository_snapshots?repository_id=eq.{repository_id}&commit_sha=eq.{commit_sha}&select=id",
+                    headers
                 )
                 
-        # Phase 2: Static & Dependency Analysis (all via Semgrep)
-        update_progress(scan_id, "analyzing", 75, "Running static code & dependency analysis (Semgrep)...")
-        all_findings = run_semgrep(repo_root)
-        
-        # If Semgrep executes successfully but finds 0 issues, it legitimately returns [].
-        # For Stage 0 MVP testing on Windows, if Semgrep fails (or finds nothing), inject the 6 seeded bugs.
-        if not all_findings:
-            from app.agents.agent_1.finding_ingestion import SEEDED_FINDINGS
-            all_findings = list(SEEDED_FINDINGS.values())
-        update_progress(scan_id, "finalizing", 95, f"Generated {len(all_findings)} total findings. Persisting to database...")
+                if status == 200 and isinstance(body, list) and len(body) > 0:
+                    snapshot_id = str(body[0]["id"])
+                    # Clear existing chunks for this snapshot to prevent duplicates
+                    _json_request(
+                        f"{supabase_url()}/rest/v1/code_chunks?snapshot_id=eq.{snapshot_id}",
+                        headers,
+                        method="DELETE"
+                    )
+                else:
+                    snapshot_id = str(uuid.uuid4())
+                    _json_post(
+                        f"{supabase_url()}/rest/v1/repository_snapshots",
+                        headers,
+                        payload={
+                            "id": snapshot_id,
+                            "repository_id": repository_id,
+                            "workspace_id": workspace_id,
+                            "commit_sha": commit_sha
+                        }
+                    )
+                
+                # 2. Insert chunks
+                for chunk, emb in zip(all_chunks, embeddings):
+                    _json_post(
+                        f"{supabase_url()}/rest/v1/code_chunks",
+                        headers,
+                        payload={
+                            "snapshot_id": snapshot_id,
+                            "file_path": chunk["file_path"],
+                            "content": chunk["content"],
+                            "language": chunk["language"],
+                            "embedding": emb
+                        }
+                    )
+                    
+            # Phase 2: Static & Dependency Analysis (all via Semgrep)
+            update_progress(scan_id, "analyzing", 75, "Running static code & dependency analysis (Semgrep)...")
+            all_findings = run_semgrep(repo_root)
             
-        for finding in all_findings:
-            payload = {
-                "scan_id": scan_id,
-                "category": finding["category"],
-                "severity": finding["severity"],
-                "title": finding["title"],
-                "description": finding["description"],
-                "file_path": finding["file_path"],
-                "line_number": finding["line_number"]
-            }
-            _json_post(f"{supabase_url()}/rest/v1/scan_findings", headers, payload)
+            # Semgrep returns [] if it legitimately finds 0 issues.
+            update_progress(scan_id, "finalizing", 95, f"Generated {len(all_findings)} total findings. Persisting to database...")
+                
+            for finding in all_findings:
+                payload = {
+                    "scan_id": scan_id,
+                    "category": finding["category"],
+                    "severity": finding["severity"],
+                    "title": finding["title"],
+                    "description": finding["description"],
+                    "file_path": finding["file_path"],
+                    "line_number": finding["line_number"]
+                }
+                _json_post(f"{supabase_url()}/rest/v1/scan_findings", headers, payload)
 
-        # Mark scan as completed
-        update_progress(scan_id, "completed", 100, "Scan completed successfully.")
-        patch_headers = {**headers, "Content-Type": "application/json"}
-        _json_request(
-            f"{supabase_url()}/rest/v1/scans?id=eq.{scan_id}",
-            patch_headers,
-            method="PATCH",
-            data=json.dumps({"status": "completed", "completed_at": "now()"}).encode("utf-8")
-        )
-        
+            # Mark scan as completed
+            update_progress(scan_id, "completed", 100, "Scan completed successfully.")
+            patch_headers = {**headers, "Content-Type": "application/json"}
+            _json_request(
+                f"{supabase_url()}/rest/v1/scans?id=eq.{scan_id}",
+                patch_headers,
+                method="PATCH",
+                data=json.dumps({"status": "completed", "completed_at": "now()"}).encode("utf-8")
+            )
+        finally:
+            import shutil
+            from pathlib import Path
+            tmp_dir = Path(repo_root).parent.parent
+            if tmp_dir.exists() and "teslalab_" in tmp_dir.name:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                print(f"[Scan {scan_id[:8]}] Cleaned up temporary directory {tmp_dir}")
+                
     except Exception as e:
         error_msg = str(e)
         update_progress(scan_id, "failed", 100, f"Error during scan: {error_msg}")
