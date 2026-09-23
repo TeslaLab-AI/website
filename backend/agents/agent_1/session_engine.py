@@ -192,10 +192,18 @@ def create_session_graph():
         
         finding = BugFinding(**state["bug_finding"])
         evidence = EvidencePack(**state["evidence_pack"]) if state.get("evidence_pack") else None
-        strategy = state.get("triage_report", {}).get("reason", "")
         
-        agent = RootCauseAgent()
-        rca = agent.analyze(finding, evidence, strategy)
+        triage_report_dict = state.get("triage_report") or {}
+        
+        from app.contracts.schemas import ContextPack, TriageReport
+        context = ContextPack(chunks=[], total_tokens=0)
+        if triage_report_dict:
+            triage = TriageReport(**triage_report_dict)
+        else:
+            triage = TriageReport(is_reproducible=False, subsystem="unknown", severity="P2", estimated_complexity="medium", auto_fix_feasible=False, reason="unknown")
+        
+        agent = RootCauseAgent(workspace_path=state.get("workspace_id", "."))
+        rca = agent.analyze(finding=finding, context=context, triage=triage, evidence=evidence)
         
         return {
             **state,
@@ -205,8 +213,7 @@ def create_session_graph():
         }
 
     def _planning_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
-        from agents.agent_1.hypothesis_engine import HypothesisEngine
-        from app.contracts.schemas import BugFinding, SessionState, AgentEventType
+        from app.contracts.schemas import SessionState, AgentEventType
         from agents.agent_1.event_bus import event_bus
         now_iso = datetime.now(timezone.utc).isoformat()
         
@@ -215,24 +222,16 @@ def create_session_graph():
         
         event_bus.emit_sync(
             session_id=state["session_id"],
-            event_type=AgentEventType.HYPOTHESIS_GENERATED,
-            payload={"message": "Generating hypotheses from root cause."},
+            event_type=AgentEventType.STATE_TRANSITION,
+            payload={"message": "Handoff to Agent 2 (Planner). Awaiting plan generation."},
             from_state=SessionState.ROOT_CAUSE,
             to_state=SessionState.PLANNING
         )
         
-        finding = BugFinding(**state["bug_finding"])
-        rca = state.get("root_cause_analysis", {})
-        rca_text = rca.get("explanation", "")
-        
-        engine = HypothesisEngine()
-        hypotheses = engine.generate_hypotheses(finding, rca_text)
-        
         return {
             **state,
             "current_state": SessionState.PLANNING.value,
-            "history": history,
-            "hypotheses": [h.model_dump() for h in hypotheses]
+            "history": history
         }
 
     for s in SessionState:
