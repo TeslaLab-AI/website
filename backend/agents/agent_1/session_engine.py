@@ -40,18 +40,17 @@ PERMITTED_TRANSITIONS: Dict[SessionState, set[SessionState]] = {
         SessionState.NEEDS_HUMAN,
     },
     SessionState.INVESTIGATING: {
-        SessionState.REPRODUCING,
         SessionState.ROOT_CAUSE,
-        SessionState.NEEDS_HUMAN,
-    },
-    SessionState.REPRODUCING: {
-        SessionState.ROOT_CAUSE,
-        SessionState.INVESTIGATING,
         SessionState.NEEDS_HUMAN,
     },
     SessionState.ROOT_CAUSE: {
-        SessionState.PLANNING,
+        SessionState.REPRODUCING,
         SessionState.INVESTIGATING,
+        SessionState.NEEDS_HUMAN,
+    },
+    SessionState.REPRODUCING: {
+        SessionState.PLANNING,
+        SessionState.ROOT_CAUSE,
         SessionState.NEEDS_HUMAN,
     },
     SessionState.PLANNING: {
@@ -113,6 +112,7 @@ class AgentSessionGraphState(TypedDict):
     evidence_pack: Dict[str, Any]
     triage_report: Optional[Dict[str, Any]]
     root_cause_analysis: Optional[Dict[str, Any]]
+    reproduction_result: Optional[Dict[str, Any]]
     hypotheses: Optional[List[Dict[str, Any]]]
 
 
@@ -223,6 +223,35 @@ def create_session_graph():
             "root_cause_analysis": rca.model_dump()
         }
 
+    def _reproducing_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from app.contracts.schemas import BugFinding, RootCauseAnalysis, SessionState
+        from agents.agent_1.reproduction_agent import ReproductionAgent
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.REPRODUCING.value, "timestamp": now_iso})
+        
+        finding = BugFinding(**state["bug_finding"])
+        rca_dict = state.get("root_cause_analysis")
+        
+        if rca_dict:
+            rca = RootCauseAnalysis(**rca_dict)
+            agent = ReproductionAgent(workspace_path=state.get("workspace_id", "."))
+            reproduction_result = agent.run(finding=finding, rca=rca)
+            
+            return {
+                **state,
+                "current_state": SessionState.REPRODUCING.value,
+                "history": history,
+                "reproduction_result": reproduction_result.model_dump() if reproduction_result else None
+            }
+        
+        return {
+            **state,
+            "current_state": SessionState.REPRODUCING.value,
+            "history": history
+        }
+
     def _planning_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
         from app.contracts.schemas import SessionState, AgentEventType
         from agents.agent_1.event_bus import event_bus
@@ -250,6 +279,8 @@ def create_session_graph():
             builder.add_node(s.value, _triage_node)
         elif s == SessionState.ROOT_CAUSE:
             builder.add_node(s.value, _root_cause_node)
+        elif s == SessionState.REPRODUCING:
+            builder.add_node(s.value, _reproducing_node)
         elif s == SessionState.PLANNING:
             builder.add_node(s.value, _planning_node)
         else:
@@ -276,9 +307,9 @@ def create_session_graph():
             SessionState.NEEDS_HUMAN.value: SessionState.NEEDS_HUMAN.value,
         }
     )
-    builder.add_edge(SessionState.INVESTIGATING.value, SessionState.REPRODUCING.value)
-    builder.add_edge(SessionState.REPRODUCING.value, SessionState.ROOT_CAUSE.value)
-    builder.add_edge(SessionState.ROOT_CAUSE.value, SessionState.PLANNING.value)
+    builder.add_edge(SessionState.INVESTIGATING.value, SessionState.ROOT_CAUSE.value)
+    builder.add_edge(SessionState.ROOT_CAUSE.value, SessionState.REPRODUCING.value)
+    builder.add_edge(SessionState.REPRODUCING.value, SessionState.PLANNING.value)
     builder.add_edge(SessionState.PLANNING.value, SessionState.EXECUTING.value)
     builder.add_edge(SessionState.EXECUTING.value, SessionState.TESTING.value)
 

@@ -93,6 +93,13 @@ class RootCauseAnalysis(BaseModel):
     # Task 13 (Git History Intelligence)
     git_context: Optional[GitContext] = Field(default=None, description="Historical context of the culprit code")
 
+class ReproductionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    script_code: str = Field(..., description="The generated Python (pytest) test code that reproduces the bug")
+    execution_log: str = Field(..., description="The stdout/stderr from executing the test in the sandbox")
+    exit_code: int = Field(..., description="The exit code of the test execution")
+    is_verified_failure: bool = Field(..., description="True if the test cleanly failed with the expected error")
+
 class SessionState(str, Enum):
     CREATED = "CREATED"
     TRIAGED = "TRIAGED"
