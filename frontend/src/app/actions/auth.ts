@@ -135,3 +135,42 @@ export async function logoutUser() {
   
   redirect('/login')
 }
+
+/**
+ * Persists user onboarding profile selection (user_type).
+ * Updates public.profiles and user_metadata in Supabase Auth.
+ */
+export async function saveOnboardingUserType(userType: string) {
+  const validTypes = ['startup', 'agency', 'freelancer', 'others']
+  if (!userType || !validTypes.includes(userType)) {
+    return { error: 'Invalid user type selected.' }
+  }
+
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    return { error: 'Unauthenticated. Please log in again.' }
+  }
+
+  // 1. Update public.profiles table
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      user_type: userType,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  if (profileError) {
+    console.error('Failed to save onboarding user_type in profiles:', profileError)
+    return { error: 'Failed to update user profile. Please try again.' }
+  }
+
+  // 2. Synchronize Supabase Auth user metadata
+  await supabase.auth.updateUser({
+    data: { user_type: userType },
+  })
+
+  return { success: true }
+}
