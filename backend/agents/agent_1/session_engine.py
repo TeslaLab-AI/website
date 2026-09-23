@@ -205,6 +205,17 @@ def create_session_graph():
         agent = RootCauseAgent(workspace_path=state.get("workspace_id", "."))
         rca = agent.analyze(finding=finding, context=context, triage=triage, evidence=evidence)
         
+        # Task 13: Git History Intelligence
+        from agents.agent_1.git_history_agent import GitHistoryAgent
+        git_agent = GitHistoryAgent()
+        git_context = git_agent.run(
+            file_path=rca.file_path, 
+            line_number=rca.line_number, 
+            workspace_path=state.get("workspace_id", ".")
+        )
+        if git_context:
+            rca.git_context = git_context
+            
         return {
             **state,
             "current_state": SessionState.ROOT_CAUSE.value,

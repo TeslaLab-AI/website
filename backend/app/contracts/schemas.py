@@ -62,6 +62,14 @@ class Hypothesis(BaseModel):
     contradicting_evidence: List[str] = Field(default_factory=list, description="Specific lines or snippets that cast doubt on this theory.")
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in this hypothesis (0.0 to 1.0).")
 
+class GitContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    introducing_commit: str = Field(..., description="The git commit SHA that introduced the culprit lines")
+    author: str = Field(..., description="Author of the introducing commit")
+    date: str = Field(..., description="Date of the introducing commit")
+    commit_message: str = Field(..., description="Original commit message")
+    original_intent_summary: str = Field(..., description="1-sentence LLM summary of the original developer intent based on the diff and message")
+
 class RootCauseAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
@@ -81,6 +89,9 @@ class RootCauseAnalysis(BaseModel):
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in this diagnosis")
     evidence_references: List[str] = Field(default_factory=list, description="Specific lines or snippets cited as evidence")
     hypothesis_tree: List[Hypothesis] = Field(default_factory=list, description="List of generated hypotheses before selecting the winner.")
+    
+    # Task 13 (Git History Intelligence)
+    git_context: Optional[GitContext] = Field(default=None, description="Historical context of the culprit code")
 
 class SessionState(str, Enum):
     CREATED = "CREATED"
