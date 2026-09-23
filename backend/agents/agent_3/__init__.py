@@ -88,7 +88,13 @@ from .day5_models import (
     DemoScenario,
 )
 
+from .evaluation_engine import (
+    EvaluationEngine,
+    SessionTelemetryRecord,
+)
+
 __all__ = [
+
     "VerificationReport",
     "TestImpactManifest",
     "VulnFinding",
@@ -149,7 +155,10 @@ __all__ = [
     "TriggerSession",
     "BenchmarkThresholdAudit",
     "DemoScenario",
+    "EvaluationEngine",
+    "SessionTelemetryRecord",
 ]
+
 
 
 
