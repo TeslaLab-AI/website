@@ -288,3 +288,7 @@ class EvaluationEngine:
 ========================================================================================
 """
         return dashboard.strip()
+
+    def render_ascii_dashboard(self) -> str:
+        """Alias for render_dashboard_ascii."""
+        return self.render_dashboard_ascii()

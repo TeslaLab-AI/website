@@ -97,7 +97,12 @@ from .autonomous_trigger import (
     AutonomousTriggerEngine,
 )
 
+from .stage0_capstone_demo import (
+    Stage0CapstoneOrchestrator,
+)
+
 __all__ = [
+
 
 
     "VerificationReport",
@@ -163,7 +168,9 @@ __all__ = [
     "EvaluationEngine",
     "SessionTelemetryRecord",
     "AutonomousTriggerEngine",
+    "Stage0CapstoneOrchestrator",
 ]
+
 
 
 

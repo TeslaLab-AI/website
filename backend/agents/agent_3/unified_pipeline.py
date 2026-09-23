@@ -205,9 +205,15 @@ class SecuritySpecialistAnalyzer(BaseSpecialistAnalyzer):
             suggested_fix = "Load JWT_SECRET dynamically from os.environ.get('JWT_SECRET')."
             diff = """--- a/src/auth/jwt.py
 +++ b/src/auth/jwt.py
-@@ -3,2 +3,2 @@
+@@ -3,5 +3,5 @@
 -JWT_SECRET = "sk_live_9948271038472910482910"
+-
+-def get_jwt_secret() -> str:
+-    return JWT_SECRET
 +JWT_SECRET = os.environ.get("JWT_SECRET", "default_secret")
++
++def get_jwt_secret() -> str:
++    return os.environ.get("JWT_SECRET", JWT_SECRET)
 """
             return diagnosis, suggested_fix, diff
 
