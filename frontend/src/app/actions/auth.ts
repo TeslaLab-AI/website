@@ -33,16 +33,59 @@ export async function signupUser(email: string, password: string, fullName: stri
     },
   })
 
+  let user = data?.user
+  let session = data?.session
+
   if (error) {
-    return { error: error.message }
+    const isRateLimit =
+      error.status === 429 ||
+      error.code === 'over_email_send_rate_limit' ||
+      error.message.toLowerCase().includes('rate limit')
+
+    if (isRateLimit) {
+      // Security Guard: Admin user creation fallback is strictly restricted to local development mode.
+      // In production, rate limit errors fail safely and return a clear user error without invoking privileged admin APIs.
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          const adminClient = createAdminClient()
+          const { data: adminUserData, error: adminUserError } = await adminClient.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: fullName },
+          })
+
+          if (adminUserError) {
+            if (adminUserError.message.includes('already registered') || adminUserError.message.includes('already been registered')) {
+              return { error: 'This email is already registered. Please log in.' }
+            }
+            return { error: adminUserError.message }
+          }
+
+          if (adminUserData?.user) {
+            user = adminUserData.user
+            // Log the newly created user in to set session cookies
+            const { data: signInData } = await supabase.auth.signInWithPassword({ email, password })
+            session = signInData?.session || null
+          }
+        } catch (adminErr: unknown) {
+          console.error('Admin signup fallback failed:', adminErr)
+          return { error: error.message }
+        }
+      } else {
+        return {
+          error: 'Email rate limit exceeded. Please wait a few minutes before trying again.',
+        }
+      }
+    } else {
+      return { error: error.message }
+    }
   }
 
   // Provisioning
-  // Because email confirmation is enabled, the user is not authenticated yet.
-  // We use the admin client (Service Role) to bypass RLS for provisioning.
-  if (data?.user) {
+  if (user) {
     // Prevent provisioning if Supabase returned a fake user (email already exists)
-    const isFakeUser = data.user.identities && data.user.identities.length === 0
+    const isFakeUser = user.identities && user.identities.length === 0
     if (isFakeUser) {
       return { error: 'This email is already registered. Please log in.' }
     }
@@ -50,52 +93,62 @@ export async function signupUser(email: string, password: string, fullName: stri
     try {
       const adminClient = createAdminClient()
       
-      // 1. Insert Profile
+      // 1. Upsert Profile (idempotent in case profile trigger exists or user re-signed up)
       const { error: profileError } = await adminClient
         .from('profiles')
-        .insert({
-          id: data.user.id,
+        .upsert({
+          id: user.id,
           full_name: fullName,
-        })
+        }, { onConflict: 'id' })
       
       if (profileError) {
         console.error('Failed to provision profile:', profileError)
-        return { error: 'Account created, but profile provisioning failed.' }
+        return { error: `Account created, but profile provisioning failed: ${profileError.message}` }
       }
 
-      // 2. Insert Workspace
-      const { data: workspace, error: workspaceError } = await adminClient
-        .from('workspaces')
-        .insert({
-          name: `${fullName}'s Workspace`,
-          plan: 'free',
-        })
-        .select('id')
-        .single()
-
-      if (workspaceError || !workspace) {
-        console.error('Failed to provision workspace:', workspaceError)
-        return { error: 'Account created, but workspace provisioning failed.' }
-      }
-
-      // 3. Insert Workspace Member
-      const { error: memberError } = await adminClient
+      // 2. Provision Workspace & Membership (idempotent check)
+      const { data: existingMember } = await adminClient
         .from('workspace_members')
-        .insert({
-          workspace_id: workspace.id,
-          user_id: data.user.id,
-        })
+        .select('workspace_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-      if (memberError) {
-        console.error('Failed to assign user to workspace:', memberError)
-        return { error: 'Account created, but workspace assignment failed.' }
+      if (!existingMember) {
+        const { data: workspace, error: workspaceError } = await adminClient
+          .from('workspaces')
+          .insert({
+            name: `${fullName}'s Workspace`,
+            plan: 'free',
+          })
+          .select('id')
+          .single()
+
+        if (workspaceError || !workspace) {
+          console.error('Failed to provision workspace:', workspaceError)
+          return { error: `Account created, but workspace provisioning failed: ${workspaceError?.message}` }
+        }
+
+        const { error: memberError } = await adminClient
+          .from('workspace_members')
+          .insert({
+            workspace_id: workspace.id,
+            user_id: user.id,
+          })
+
+        if (memberError) {
+          console.error('Failed to assign user to workspace:', memberError)
+          return { error: `Account created, but workspace assignment failed: ${memberError.message}` }
+        }
       }
 
     } catch (provisioningError: unknown) {
-      // Log server-side to diagnose partial failures
-      console.error('Provisioning failed for user', data.user.id, ':', provisioningError)
-      // Propagate a generic safe error to the client
+      console.error('Provisioning failed for user', user.id, ':', provisioningError)
       return { error: provisioningError instanceof Error ? provisioningError.message : 'Failed to provision initial account data.' }
+    }
+
+    // If the user has an active session, redirect straight to dashboard
+    if (session) {
+      redirect('/dashboard')
     }
   }
 

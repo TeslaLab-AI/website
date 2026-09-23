@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveOnboardingUserType } from '@/app/actions/auth'
-import { Rocket, Briefcase, Code2, Layers, Check, ArrowRight } from 'lucide-react'
+import { Rocket, Briefcase, Code2, Layers, ArrowRight, type LucideProps } from 'lucide-react'
 
 export type UserTypeOption = 'startup' | 'agency' | 'freelancer' | 'others'
 
@@ -11,7 +11,7 @@ interface OnboardingOption {
   id: UserTypeOption
   label: string
   description: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ComponentType<LucideProps>
 }
 
 const ONBOARDING_OPTIONS: OnboardingOption[] = [
@@ -24,19 +24,19 @@ const ONBOARDING_OPTIONS: OnboardingOption[] = [
   {
     id: 'agency',
     label: 'Agency',
-    description: 'Managing and maintaining codebases for multiple clients.',
+    description: 'Managing codebases for multiple clients.',
     icon: Briefcase,
   },
   {
     id: 'freelancer',
     label: 'Freelancer',
-    description: 'Independent engineer delivering custom solutions.',
+    description: 'Independent engineer delivering solutions.',
     icon: Code2,
   },
   {
     id: 'others',
-    label: 'Others',
-    description: 'Individual developer, educator, or open-source maintainer.',
+    label: 'Other',
+    description: 'Developer, educator, or OSS maintainer.',
     icon: Layers,
   },
 ]
@@ -83,30 +83,45 @@ export function OnboardingScreen({ onCompleted }: OnboardingScreenProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[75vh] px-4 py-8 w-full max-w-3xl mx-auto font-sans">
-      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-8 sm:p-12">
-        {/* Header Section */}
-        <div className="text-center max-w-xl mx-auto mb-10">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-4">
-            <Rocket className="w-6 h-6" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-3">
+    <div className="tl-landing flex flex-col items-center justify-center min-h-[80vh] px-4 py-12 w-full relative overflow-hidden">
+      {/* Atmospheric Background Glow */}
+      <div className="tl-atmosphere" />
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <p className="tl-kicker mb-4">Get Started</p>
+          <h1
+            className="text-3xl sm:text-4xl font-bold tracking-tight mb-3"
+            style={{ color: 'var(--tl-fg)' }}
+          >
             What best describes you?
           </h1>
-          <p className="text-base text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          <p
+            className="text-base sm:text-lg leading-relaxed max-w-md mx-auto"
+            style={{ color: 'var(--tl-muted)' }}
+          >
             Help us tailor your TeslaLab workspace.
           </p>
         </div>
 
-        {/* Error Notification */}
+        {/* Error */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+          <div
+            className="mb-8 mx-auto max-w-lg p-4 rounded-xl text-sm text-center"
+            style={{
+              background: 'rgba(255, 94, 58, 0.1)',
+              border: '1px solid rgba(255, 94, 58, 0.25)',
+              color: '#ff7a5c',
+            }}
+          >
             {error}
           </div>
         )}
 
-        {/* Option Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+        {/* Option Cards — 4 across on desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
           {ONBOARDING_OPTIONS.map((option) => {
             const Icon = option.icon
             const isSelected = selectedType === option.id
@@ -119,62 +134,116 @@ export function OnboardingScreen({ onCompleted }: OnboardingScreenProps) {
                   setSelectedType(option.id)
                   setError(null)
                 }}
-                className={`relative flex flex-col p-6 text-left rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 ${
-                  isSelected
-                    ? 'border-blue-600 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 shadow-md scale-[1.01]'
-                    : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-850'
-                }`}
+                className="group relative flex flex-col items-center text-center rounded-2xl p-8 focus:outline-none"
+                style={{
+                  background: isSelected
+                    ? 'rgba(255, 94, 58, 0.08)'
+                    : 'rgba(243, 238, 228, 0.03)',
+                  border: isSelected
+                    ? '1.5px solid rgba(255, 94, 58, 0.45)'
+                    : '1px solid rgba(243, 238, 228, 0.08)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  boxShadow: isSelected
+                    ? '0 0 32px rgba(255, 94, 58, 0.12), 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(243,238,228,0.06)'
+                    : '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(243,238,228,0.04)',
+                  transition: 'all 280ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  transform: isSelected ? 'scale(1.03)' : 'scale(1)',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    const el = e.currentTarget
+                    el.style.transform = 'scale(1.04)'
+                    el.style.boxShadow =
+                      '0 0 28px rgba(255, 94, 58, 0.1), 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(243,238,228,0.08)'
+                    el.style.borderColor = 'rgba(243, 238, 228, 0.2)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    const el = e.currentTarget
+                    el.style.transform = 'scale(1)'
+                    el.style.boxShadow =
+                      '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(243,238,228,0.04)'
+                    el.style.borderColor = 'rgba(243, 238, 228, 0.08)'
+                  }
+                }}
               >
-                {/* Top Row: Icon & Checkmark indicator */}
-                <div className="flex items-center justify-between w-full mb-4">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                      isSelected
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-
-                  {isSelected && (
-                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                      <Check className="w-4 h-4 stroke-[3]" />
-                    </div>
-                  )}
+                {/* Icon */}
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
+                  style={{
+                    background: isSelected
+                      ? 'rgba(255, 94, 58, 0.15)'
+                      : 'rgba(243, 238, 228, 0.06)',
+                    border: isSelected
+                      ? '1px solid rgba(255, 94, 58, 0.3)'
+                      : '1px solid rgba(243, 238, 228, 0.08)',
+                    transition: 'all 280ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  }}
+                >
+                  <Icon
+                    className="w-6 h-6 transition-colors duration-300"
+                    color={isSelected ? '#ff5e3a' : '#9b9589'}
+                  />
                 </div>
 
-                {/* Content */}
+                {/* Label */}
                 <h3
-                  className={`text-lg font-semibold mb-1 ${
-                    isSelected ? 'text-blue-950 dark:text-white' : 'text-zinc-900 dark:text-white'
-                  }`}
+                  className="text-lg font-semibold mb-2 tracking-tight"
+                  style={{
+                    color: isSelected ? '#ff5e3a' : 'var(--tl-fg)',
+                    transition: 'color 280ms ease',
+                  }}
                 >
                   {option.label}
                 </h3>
-                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+
+                {/* Description */}
+                <p
+                  className="text-xs leading-relaxed"
+                  style={{
+                    color: 'var(--tl-muted)',
+                  }}
+                >
                   {option.description}
                 </p>
+
+                {/* Selected Ring Indicator */}
+                {isSelected && (
+                  <div
+                    className="absolute -top-px -left-px -right-px -bottom-px rounded-2xl pointer-events-none"
+                    style={{
+                      boxShadow: '0 0 24px rgba(255, 94, 58, 0.15)',
+                    }}
+                  />
+                )}
               </button>
             )
           })}
         </div>
 
-        {/* Action Button */}
-        <div className="flex items-center justify-end">
+        {/* Continue Button */}
+        <div className="flex justify-center">
           <button
             type="button"
             disabled={!selectedType || loading}
             onClick={handleContinue}
-            className="w-full sm:w-auto inline-flex items-center justify-center py-3 px-8 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="tl-btn-primary rounded-xl px-10 py-3 text-sm font-semibold tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              minWidth: '200px',
+              borderRadius: '0.75rem',
+              transition: 'all 200ms ease',
+            }}
           >
             {loading ? (
               'Saving...'
             ) : (
-              <>
+              <span className="inline-flex items-center gap-2">
                 Continue
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
+                <ArrowRight className="w-4 h-4" />
+              </span>
             )}
           </button>
         </div>
