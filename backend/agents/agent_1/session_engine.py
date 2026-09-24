@@ -40,18 +40,17 @@ PERMITTED_TRANSITIONS: Dict[SessionState, set[SessionState]] = {
         SessionState.NEEDS_HUMAN,
     },
     SessionState.INVESTIGATING: {
-        SessionState.REPRODUCING,
         SessionState.ROOT_CAUSE,
-        SessionState.NEEDS_HUMAN,
-    },
-    SessionState.REPRODUCING: {
-        SessionState.ROOT_CAUSE,
-        SessionState.INVESTIGATING,
         SessionState.NEEDS_HUMAN,
     },
     SessionState.ROOT_CAUSE: {
-        SessionState.PLANNING,
+        SessionState.REPRODUCING,
         SessionState.INVESTIGATING,
+        SessionState.NEEDS_HUMAN,
+    },
+    SessionState.REPRODUCING: {
+        SessionState.PLANNING,
+        SessionState.ROOT_CAUSE,
         SessionState.NEEDS_HUMAN,
     },
     SessionState.PLANNING: {
@@ -109,8 +108,12 @@ class AgentSessionGraphState(TypedDict):
     current_state: str
     history: List[Dict[str, Any]]
     error: Optional[str]
+    bug_finding: Dict[str, Any]
+    evidence_pack: Dict[str, Any]
     triage_report: Optional[Dict[str, Any]]
     root_cause_analysis: Optional[Dict[str, Any]]
+    reproduction_result: Optional[Dict[str, Any]]
+    hypotheses: Optional[List[Dict[str, Any]]]
 
 
 def create_session_graph():
@@ -140,8 +143,148 @@ def create_session_graph():
             }
         return _node_fn
 
+    def _triage_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from agents.agent_1.triage_agent import TriageAgent
+        from app.contracts.schemas import BugFinding, EvidencePack, SessionState, AgentEventType
+        from agents.agent_1.event_bus import event_bus
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.TRIAGED.value, "timestamp": now_iso})
+        
+        event_bus.emit_sync(
+            session_id=state["session_id"],
+            event_type=AgentEventType.SEARCHING_REPOSITORY,
+            payload={"finding_id": state.get("bug_finding", {}).get("id")},
+            from_state=SessionState.CREATED,
+            to_state=SessionState.TRIAGED
+        )
+        
+        finding = BugFinding(**state["bug_finding"])
+        evidence = EvidencePack(**state["evidence_pack"]) if state.get("evidence_pack") else None
+        
+        agent = TriageAgent()
+        report = agent.run_triage(finding, evidence)
+        
+        return {
+            **state,
+            "current_state": SessionState.TRIAGED.value,
+            "history": history,
+            "triage_report": report.model_dump()
+        }
+
+    def _root_cause_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from agents.agent_1.root_cause_agent import RootCauseAgent
+        from app.contracts.schemas import BugFinding, EvidencePack, SessionState, AgentEventType
+        from agents.agent_1.event_bus import event_bus
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.ROOT_CAUSE.value, "timestamp": now_iso})
+        
+        event_bus.emit_sync(
+            session_id=state["session_id"],
+            event_type=AgentEventType.READING_FILE,
+            payload={"file": state["bug_finding"].get("file_path", "unknown")},
+            from_state=SessionState.REPRODUCING,
+            to_state=SessionState.ROOT_CAUSE
+        )
+        
+        finding = BugFinding(**state["bug_finding"])
+        evidence = EvidencePack(**state["evidence_pack"]) if state.get("evidence_pack") else None
+        
+        triage_report_dict = state.get("triage_report") or {}
+        
+        from app.contracts.schemas import ContextPack, TriageReport
+        context = ContextPack(chunks=[], total_tokens=0)
+        if triage_report_dict:
+            triage = TriageReport(**triage_report_dict)
+        else:
+            triage = TriageReport(is_reproducible=False, subsystem="unknown", severity="P2", estimated_complexity="medium", auto_fix_feasible=False, reason="unknown")
+        
+        agent = RootCauseAgent(workspace_path=state.get("workspace_id", "."))
+        rca = agent.analyze(finding=finding, context=context, triage=triage, evidence=evidence)
+        
+        # Task 13: Git History Intelligence
+        from agents.agent_1.git_history_agent import GitHistoryAgent
+        git_agent = GitHistoryAgent()
+        git_context = git_agent.run(
+            file_path=rca.file_path, 
+            line_number=rca.line_number, 
+            workspace_path=state.get("workspace_id", ".")
+        )
+        if git_context:
+            rca.git_context = git_context
+            
+        return {
+            **state,
+            "current_state": SessionState.ROOT_CAUSE.value,
+            "history": history,
+            "root_cause_analysis": rca.model_dump()
+        }
+
+    def _reproducing_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from app.contracts.schemas import BugFinding, RootCauseAnalysis, SessionState
+        from agents.agent_1.reproduction_agent import ReproductionAgent
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.REPRODUCING.value, "timestamp": now_iso})
+        
+        finding = BugFinding(**state["bug_finding"])
+        rca_dict = state.get("root_cause_analysis")
+        
+        if rca_dict:
+            rca = RootCauseAnalysis(**rca_dict)
+            agent = ReproductionAgent(workspace_path=state.get("workspace_id", "."))
+            reproduction_result = agent.run(finding=finding, rca=rca)
+            
+            return {
+                **state,
+                "current_state": SessionState.REPRODUCING.value,
+                "history": history,
+                "reproduction_result": reproduction_result.model_dump() if reproduction_result else None
+            }
+        
+        return {
+            **state,
+            "current_state": SessionState.REPRODUCING.value,
+            "history": history
+        }
+
+    def _planning_node(state: AgentSessionGraphState) -> AgentSessionGraphState:
+        from app.contracts.schemas import SessionState, AgentEventType
+        from agents.agent_1.event_bus import event_bus
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        history = list(state.get("history", []))
+        history.append({"from_state": state.get("current_state"), "to_state": SessionState.PLANNING.value, "timestamp": now_iso})
+        
+        event_bus.emit_sync(
+            session_id=state["session_id"],
+            event_type=AgentEventType.STATE_TRANSITION,
+            payload={"message": "Handoff to Agent 2 (Planner). Awaiting plan generation."},
+            from_state=SessionState.ROOT_CAUSE,
+            to_state=SessionState.PLANNING
+        )
+        
+        return {
+            **state,
+            "current_state": SessionState.PLANNING.value,
+            "history": history
+        }
+
     for s in SessionState:
-        builder.add_node(s.value, _make_node(s))
+        if s == SessionState.TRIAGED:
+            builder.add_node(s.value, _triage_node)
+        elif s == SessionState.ROOT_CAUSE:
+            builder.add_node(s.value, _root_cause_node)
+        elif s == SessionState.REPRODUCING:
+            builder.add_node(s.value, _reproducing_node)
+        elif s == SessionState.PLANNING:
+            builder.add_node(s.value, _planning_node)
+        else:
+            builder.add_node(s.value, _make_node(s))
 
     # Entry point connects to CREATED
     builder.add_edge(START, SessionState.CREATED.value)
@@ -164,9 +307,9 @@ def create_session_graph():
             SessionState.NEEDS_HUMAN.value: SessionState.NEEDS_HUMAN.value,
         }
     )
-    builder.add_edge(SessionState.INVESTIGATING.value, SessionState.REPRODUCING.value)
-    builder.add_edge(SessionState.REPRODUCING.value, SessionState.ROOT_CAUSE.value)
-    builder.add_edge(SessionState.ROOT_CAUSE.value, SessionState.PLANNING.value)
+    builder.add_edge(SessionState.INVESTIGATING.value, SessionState.ROOT_CAUSE.value)
+    builder.add_edge(SessionState.ROOT_CAUSE.value, SessionState.REPRODUCING.value)
+    builder.add_edge(SessionState.REPRODUCING.value, SessionState.PLANNING.value)
     builder.add_edge(SessionState.PLANNING.value, SessionState.EXECUTING.value)
     builder.add_edge(SessionState.EXECUTING.value, SessionState.TESTING.value)
 

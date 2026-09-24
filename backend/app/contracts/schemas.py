@@ -50,7 +50,7 @@ class TriageReport(BaseModel):
     
     is_reproducible: bool = Field(..., description="Whether the bug has enough info to be reproducible")
     subsystem: str = Field(..., description="The subsystem this bug belongs to (e.g., auth, database, frontend)")
-    severity: TriageSeverity = Field(..., description="Assessed severity (P0-P3)")
+    severity: TriageSeverity
     estimated_complexity: str = Field(..., description="Estimation of complexity (e.g., low, medium, high)")
     auto_fix_feasible: bool = Field(..., description="Whether autonomous fixing is feasible")
     reason: str = Field(..., description="Reasoning for feasibility and severity")
@@ -61,6 +61,14 @@ class Hypothesis(BaseModel):
     supporting_evidence: List[str] = Field(default_factory=list, description="Specific lines or snippets supporting this theory.")
     contradicting_evidence: List[str] = Field(default_factory=list, description="Specific lines or snippets that cast doubt on this theory.")
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in this hypothesis (0.0 to 1.0).")
+
+class GitContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    introducing_commit: str = Field(..., description="The git commit SHA that introduced the culprit lines")
+    author: str = Field(..., description="Author of the introducing commit")
+    date: str = Field(..., description="Date of the introducing commit")
+    commit_message: str = Field(..., description="Original commit message")
+    original_intent_summary: str = Field(..., description="1-sentence LLM summary of the original developer intent based on the diff and message")
 
 class RootCauseAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -81,6 +89,16 @@ class RootCauseAnalysis(BaseModel):
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in this diagnosis")
     evidence_references: List[str] = Field(default_factory=list, description="Specific lines or snippets cited as evidence")
     hypothesis_tree: List[Hypothesis] = Field(default_factory=list, description="List of generated hypotheses before selecting the winner.")
+    
+    # Task 13 (Git History Intelligence)
+    git_context: Optional[GitContext] = Field(default=None, description="Historical context of the culprit code")
+
+class ReproductionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    script_code: str = Field(..., description="The generated Python (pytest) test code that reproduces the bug")
+    execution_log: str = Field(..., description="The stdout/stderr from executing the test in the sandbox")
+    exit_code: int = Field(..., description="The exit code of the test execution")
+    is_verified_failure: bool = Field(..., description="True if the test cleanly failed with the expected error")
 
 class SessionState(str, Enum):
     CREATED = "CREATED"

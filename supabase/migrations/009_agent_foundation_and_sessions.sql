@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS public.agent_sessions (
     task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
     current_state text NOT NULL DEFAULT 'CREATED',
+    evidence_pack jsonb DEFAULT '{}'::jsonb,
+    triage_report jsonb DEFAULT '{}'::jsonb,
+    root_cause_analysis jsonb DEFAULT '{}'::jsonb,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now(),
     UNIQUE(task_id)

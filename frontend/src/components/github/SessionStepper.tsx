@@ -22,8 +22,8 @@ interface EventLog {
 // 7-phase visible stepper mapping to the 13-state engine
 const DISPLAY_STEPS = [
   { id: 'investigating', label: 'Investigating', states: ['CREATED', 'TRIAGED', 'INVESTIGATING'] },
-  { id: 'reproducing', label: 'Reproducing', states: ['REPRODUCING'] },
   { id: 'root_cause', label: 'Root Cause', states: ['ROOT_CAUSE'] },
+  { id: 'reproducing', label: 'Reproducing', states: ['REPRODUCING'] },
   { id: 'plan', label: 'Plan', states: ['PLANNING'] },
   { id: 'fix', label: 'Fix', states: ['EXECUTING', 'REPAIRING'] },
   { id: 'tests', label: 'Tests', states: ['TESTING'] },
@@ -225,15 +225,6 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
               {currentState === 'INVESTIGATING' && (
                 <button
                   disabled={loading}
-                  onClick={() => handleTransition('REPRODUCING')}
-                  className="px-2.5 py-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium disabled:opacity-50 transition"
-                >
-                  Step to Reproducing →
-                </button>
-              )}
-              {currentState === 'REPRODUCING' && (
-                <button
-                  disabled={loading}
                   onClick={() => handleTransition('ROOT_CAUSE')}
                   className="px-2.5 py-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium disabled:opacity-50 transition"
                 >
@@ -241,6 +232,15 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
                 </button>
               )}
               {currentState === 'ROOT_CAUSE' && (
+                <button
+                  disabled={loading}
+                  onClick={() => handleTransition('REPRODUCING')}
+                  className="px-2.5 py-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium disabled:opacity-50 transition"
+                >
+                  Step to Reproducing →
+                </button>
+              )}
+              {currentState === 'REPRODUCING' && (
                 <button
                   disabled={loading}
                   onClick={() => handleTransition('PLANNING')}

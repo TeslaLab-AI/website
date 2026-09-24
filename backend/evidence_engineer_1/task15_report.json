@@ -1,0 +1,48 @@
+{
+  "total_bugs": 5,
+  "passed_count": 5,
+  "pass_rate": 1.0,
+  "success": true,
+  "details": [
+    {
+      "id": "bug-01",
+      "title": "Division by zero in calculate_ratio",
+      "passed": true,
+      "final_state": "PLANNING",
+      "reproduction_script": "# test_bug1_math.py\nimport pytest\nfrom bug1_math import calculate_ratio\n\ndef test_calculate_ratio_division_by_zero():\n    # This test should fail with a ZeroDivisionError\n    calculate_ratio(10, 0)",
+      "execution_log": "STDOUT:\n============================= test session starts =============================\nplatform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0\nrootdir: C:\\Users\\ACER\\AppData\\Local\\Temp\\tmpzvzppf73\nplugins: anyio-4.14.2, langsmith-0.12.6\ncollected 1 item\n\ntest_repro_5e4b1263.py F                                                 [100%]\n\n================================== FAILURES ===================================\n____________________ test_calculate_ratio_division_by_zero ____________________\n\n    def test_calculate_ratio_division_by_zero():\n        # This test should fail with a ZeroDivisionError\n>       calculate_ratio(10, 0)\n\ntest_repro_5e4b1263.py:7: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\na = 10, b = 0\n\n    def calculate_ratio(a, b):\n>       return a / b\n               ^^^^^\nE       ZeroDivisionError: division by zero\n\nbug1_math.py:2: ZeroDivisionError\n=========================== short test summary info ===========================\nFAILED test_repro_5e4b1263.py::test_calculate_ratio_division_by_zero - ZeroDi...\n============================== 1 failed in 0.36s ==============================\n\nSTDERR:\n"
+    },
+    {
+      "id": "bug-02",
+      "title": "KeyError in parse_payload",
+      "passed": true,
+      "final_state": "PLANNING",
+      "reproduction_script": "# test_bug2_parser.py\nimport pytest\nfrom bug2_parser import parse_payload\n\ndef test_parse_payload_key_error():\n    # This test should fail with a KeyError because 'key' is not present in the payload\n    parse_payload({'data': {}})\n",
+      "execution_log": "STDOUT:\n============================= test session starts =============================\nplatform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0\nrootdir: C:\\Users\\ACER\\AppData\\Local\\Temp\\tmpzvzppf73\nplugins: anyio-4.14.2, langsmith-0.12.6\ncollected 1 item\n\ntest_repro_e5c47e70.py F                                                 [100%]\n\n================================== FAILURES ===================================\n________________________ test_parse_payload_key_error _________________________\n\n    def test_parse_payload_key_error():\n        # This test should fail with a KeyError because 'key' is not present in the payload\n>       parse_payload({'data': {}})\n\ntest_repro_e5c47e70.py:7: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npayload = {'data': {}}\n\n    def parse_payload(payload):\n>       return payload['data']['user_id']\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       KeyError: 'user_id'\n\nbug2_parser.py:2: KeyError\n=========================== short test summary info ===========================\nFAILED test_repro_e5c47e70.py::test_parse_payload_key_error - KeyError: 'user...\n============================== 1 failed in 0.21s ==============================\n\nSTDERR:\n"
+    },
+    {
+      "id": "bug-03",
+      "title": "TypeError in format_greeting",
+      "passed": true,
+      "final_state": "PLANNING",
+      "reproduction_script": "# test_bug3_formatter.py\nimport pytest\nfrom bug3_formatter import format_greeting\n\ndef test_format_greeting_type_error():\n    # This test should fail with a TypeError because the second argument is an integer\n    format_greeting('Alice', 30)\n\n# To run this test, use the command: pytest test_bug3_formatter.py",
+      "execution_log": "STDOUT:\n============================= test session starts =============================\nplatform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0\nrootdir: C:\\Users\\ACER\\AppData\\Local\\Temp\\tmpzvzppf73\nplugins: anyio-4.14.2, langsmith-0.12.6\ncollected 1 item\n\ntest_repro_40441096.py F                                                 [100%]\n\n================================== FAILURES ===================================\n_______________________ test_format_greeting_type_error _______________________\n\n    def test_format_greeting_type_error():\n        # This test should fail with a TypeError because the second argument is an integer\n>       format_greeting('Alice', 30)\n\ntest_repro_40441096.py:7: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nname = 'Alice', age = 30\n\n    def format_greeting(name, age):\n>       return 'Hello ' + name + ', you are ' + age + ' years old'\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: can only concatenate str (not \"int\") to str\n\nbug3_formatter.py:2: TypeError\n=========================== short test summary info ===========================\nFAILED test_repro_40441096.py::test_format_greeting_type_error - TypeError: c...\n============================== 1 failed in 0.23s ==============================\n\nSTDERR:\n"
+    },
+    {
+      "id": "bug-04",
+      "title": "Concurrency RuntimeError in process_concurrently",
+      "passed": true,
+      "final_state": "PLANNING",
+      "reproduction_script": "# test_bug4_async.py\nimport pytest\nfrom bug4_async import process_concurrently\n\n# Test function to trigger the RuntimeError\n\ndef test_process_concurrently_runtime_error():\n    # Call the function that is known to cause a RuntimeError due to concurrency issues\n    process_concurrently()\n\n# To run this test, use the command: pytest test_bug4_async.py\n# This test is expected to fail with a RuntimeError due to the known bug in process_concurrently.",
+      "execution_log": "STDOUT:\n============================= test session starts =============================\nplatform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0\nrootdir: C:\\Users\\ACER\\AppData\\Local\\Temp\\tmpzvzppf73\nplugins: anyio-4.14.2, langsmith-0.12.6\ncollected 1 item\n\ntest_repro_bdeb8845.py F                                                 [100%]\n\n================================== FAILURES ===================================\n___________________ test_process_concurrently_runtime_error ___________________\n\n    def test_process_concurrently_runtime_error():\n        # Call the function that is known to cause a RuntimeError due to concurrency issues\n>       process_concurrently()\n\ntest_repro_bdeb8845.py:9: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\n    def process_concurrently():\n        time.sleep(0.1)\n>       raise RuntimeError('Race condition state corruption')\nE       RuntimeError: Race condition state corruption\n\nbug4_async.py:4: RuntimeError\n=========================== short test summary info ===========================\nFAILED test_repro_bdeb8845.py::test_process_concurrently_runtime_error - Runt...\n============================== 1 failed in 0.29s ==============================\n\nSTDERR:\n"
+    },
+    {
+      "id": "bug-05",
+      "title": "IndexError in get_last_element",
+      "passed": true,
+      "final_state": "PLANNING",
+      "reproduction_script": "# test_bug5_data.py\nimport pytest\nfrom bug5_data import get_last_element\n\ndef test_get_last_element_with_non_empty_list():\n    # This should work fine\n    assert get_last_element([1, 2, 3]) == 3\n\n\ndef test_get_last_element_with_empty_list():\n    # This will cause an IndexError\n    get_last_element([])\n\nif __name__ == \"__main__\":\n    pytest.main()",
+      "execution_log": "STDOUT:\n============================= test session starts =============================\nplatform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0\nrootdir: C:\\Users\\ACER\\AppData\\Local\\Temp\\tmpzvzppf73\nplugins: anyio-4.14.2, langsmith-0.12.6\ncollected 2 items\n\ntest_repro_49926ed2.py FF                                                [100%]\n\n================================== FAILURES ===================================\n__________________ test_get_last_element_with_non_empty_list __________________\n\n    def test_get_last_element_with_non_empty_list():\n        # This should work fine\n>       assert get_last_element([1, 2, 3]) == 3\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntest_repro_49926ed2.py:7: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\narr = [1, 2, 3]\n\n    def get_last_element(arr):\n>       return arr[len(arr)]\n               ^^^^^^^^^^^^^\nE       IndexError: list index out of range\n\nbug5_data.py:2: IndexError\n____________________ test_get_last_element_with_empty_list ____________________\n\n    def test_get_last_element_with_empty_list():\n        # This will cause an IndexError\n>       get_last_element([])\n\ntest_repro_49926ed2.py:12: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\narr = []\n\n    def get_last_element(arr):\n>       return arr[len(arr)]\n               ^^^^^^^^^^^^^\nE       IndexError: list index out of range\n\nbug5_data.py:2: IndexError\n=========================== short test summary info ===========================\nFAILED test_repro_49926ed2.py::test_get_last_element_with_non_empty_list - In...\nFAILED test_repro_49926ed2.py::test_get_last_element_with_empty_list - IndexE...\n============================== 2 failed in 0.30s ==============================\n\nSTDERR:\n"
+    }
+  ]
+}

@@ -225,14 +225,18 @@ class FindingIngestionService:
         # Build evidence pack
         pack = build_evidence_pack(bug_finding, workspace_path=None, log_file_path=None)
 
-        session_payload = {
+        session_db_payload = {
             "id": session_id,
             "task_id": task_id,
             "workspace_id": workspace_id,
             "current_state": SessionState.INVESTIGATING.value,
-            "evidence_pack": pack.model_dump(),
             "created_at": now_iso,
             "updated_at": now_iso,
+        }
+
+        session_memory_payload = {
+            **session_db_payload,
+            "evidence_pack": pack.model_dump(),
         }
 
         event_payload = {
@@ -248,7 +252,7 @@ class FindingIngestionService:
         db_persisted = False
         try:
             t_status, _ = _json_post(f"{supabase_url()}/rest/v1/tasks", headers, task_payload)
-            s_status, _ = _json_post(f"{supabase_url()}/rest/v1/agent_sessions", headers, session_payload)
+            s_status, _ = _json_post(f"{supabase_url()}/rest/v1/agent_sessions", headers, session_db_payload)
             _json_post(f"{supabase_url()}/rest/v1/agent_events", headers, event_payload)
             if t_status in (200, 201, 204) and s_status in (200, 201, 204):
                 db_persisted = True
@@ -256,7 +260,7 @@ class FindingIngestionService:
             pass
 
         _memory_tasks[task_id] = task_payload
-        _memory_sessions[session_id] = session_payload
+        _memory_sessions[session_id] = session_memory_payload
         _memory_events.append(event_payload)
 
         return {
