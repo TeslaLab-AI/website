@@ -365,7 +365,11 @@ class PlannerAgent:
         lines = context.file_content.splitlines()
         target_idx = max(0, min(rca.line_number - 1, len(lines) - 1)) if lines else 0
         orig_line = lines[target_idx] if lines else "# original code"
-        replacement_line = f"{orig_line}  # fixed: {rca.suggested_fix}"
+        if rca.suggested_fix and not rca.suggested_fix.strip().startswith("#"):
+            indent = orig_line[:len(orig_line) - len(orig_line.lstrip())]
+            replacement_line = f"{indent}{rca.suggested_fix.strip()}"
+        else:
+            replacement_line = f"{orig_line}  # fixed: {rca.suggested_fix}"
 
         steps.append(
             PlanStep(
