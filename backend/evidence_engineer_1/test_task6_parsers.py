@@ -70,6 +70,7 @@ def test_sentry_parser():
     assert s1.id == "sentry-py-001"
     assert "app/main.py" in s1.files_hint
     assert "app/config.py" in s1.files_hint
+    assert s1.stack_trace is not None
     assert "line 25" in s1.stack_trace
 
     assert isinstance(s2, BugFinding)
@@ -118,8 +119,11 @@ def test_github_parser():
     assert isinstance(g1, BugFinding)
     assert g1.id == "101"
     assert "src/server.py" in g1.files_hint
+    assert g1.stack_trace is not None
     assert "line 50" in g1.stack_trace
-    assert "bug" in g1.environment.get("labels")
+    labels = g1.environment.get("labels")
+    assert isinstance(labels, list)
+    assert "bug" in labels
 
     assert isinstance(g2, BugFinding)
     assert "db/connect.ts" in g2.files_hint
@@ -145,10 +149,10 @@ def test_llm_parser():
     l3 = parse_freeform_text(text_3)
 
     assert isinstance(l1, BugFinding)
-    assert "stripe_client.py" in str(l1.files_hint)
+    assert any("stripe_client.py" in f for f in l1.files_hint)
     
     assert isinstance(l2, BugFinding)
-    assert "services/user.js" in str(l2.files_hint)
+    assert any("services/user.js" in f for f in l2.files_hint)
     assert l2.stack_trace is not None
     
     assert isinstance(l3, BugFinding)

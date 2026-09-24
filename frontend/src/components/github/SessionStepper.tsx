@@ -41,6 +41,7 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
   // Poll session state from backend every 2.5 seconds
   useEffect(() => {
     let isMounted = true
+    let interval: NodeJS.Timeout
 
     const fetchSession = async () => {
       try {
@@ -48,9 +49,14 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
         if (!res.ok) return
         const data = await res.json()
         if (isMounted && data?.session?.current_state) {
-          setCurrentState(data.session.current_state)
+          const newState = data.session.current_state
+          setCurrentState(newState)
           if (data.events) {
             setEvents(data.events)
+          }
+          // Stop polling if we reach a terminal state
+          if (['FAILED', 'NEEDS_HUMAN', 'MERGED', 'CANCELLED'].includes(newState)) {
+            clearInterval(interval)
           }
         }
       } catch (err) {
@@ -59,7 +65,7 @@ export function SessionStepper({ sessionId, initialState = 'INVESTIGATING', onTr
     }
 
     fetchSession()
-    const interval = setInterval(fetchSession, 2500)
+    interval = setInterval(fetchSession, 2500)
     return () => {
       isMounted = false
       clearInterval(interval)

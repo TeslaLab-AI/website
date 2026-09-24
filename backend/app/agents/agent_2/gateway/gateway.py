@@ -61,7 +61,7 @@ class LLMGateway:
 
     def __init__(
         self,
-        adapters: list[BaseLLMAdapter] | None = None,
+        adapters: Sequence[BaseLLMAdapter] | None = None,
         telemetry: GatewayTelemetry | None = None,
         cost_tracker: CostTracker | None = None,
         budget_enforcer: BudgetEnforcer | None = None,

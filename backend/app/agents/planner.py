@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import openai
 
-from app.agents.normalizer import NormalizedTask
+from app.agents.agent_1.normalizer import NormalizedTask
 from app.agents.executor import FixPlan, FixStep
 
 client = openai.OpenAI()
@@ -115,7 +115,7 @@ CRITICAL ARCHITECTURAL RULES:
         temperature=0.2,
     )
 
-    data = json.loads(res.choices[0].message.content)
+    data = json.loads(res.choices[0].message.content or "{}")
 
     steps = []
     for s in data.get("steps", []):

@@ -138,9 +138,9 @@ class CostPersistenceService:
         return payload
 
     def _update_event_bus_summary(self, summary: SessionCostSummary) -> None:
-        """Update existing run state in app.agents.event_bus if tracked."""
+        """Update existing run state in app.agents.agent_1.event_bus if tracked."""
         try:
-            from app.agents import event_bus
+            from app.agents.agent_1 import pipeline_event_bus as event_bus
             run = event_bus.get_run(summary.session_id)
             if run is not None:
                 run["cost_summary"] = {
@@ -185,9 +185,9 @@ class CostPersistenceService:
             return False
 
     def _notify_event_bus(self, run_id: str, message: str) -> None:
-        """Best-effort log message into app.agents.event_bus if run_id exists."""
+        """Best-effort log message into app.agents.agent_1.event_bus if run_id exists."""
         try:
-            from app.agents import event_bus
+            from app.agents.agent_1 import pipeline_event_bus as event_bus
             run = event_bus.get_run(run_id)
             if run:
                 event_bus.update_phase(run_id, "NEEDS_HUMAN", message)

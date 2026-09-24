@@ -22,9 +22,9 @@ import json
 import os
 import uuid
 
-from app.agents import event_bus
-from app.agents.triage_agents import run_triage_agents
-from app.agents.normalizer import normalize
+from app.agents.agent_1 import pipeline_event_bus as event_bus
+from app.agents.agent_1.triage_agents import run_triage_agents
+from app.agents.agent_1.normalizer import normalize
 from app.agents.planner import plan, PlannerInput, MAX_ATTEMPTS
 from app.agents.sandbox import create_workspace
 from app.agents.executor import execute_plan
@@ -242,6 +242,10 @@ def run_pipeline(
                 return
 
         # ── 6. Commit changes to a new branch ─────────────────────
+        assert final_plan is not None
+        assert final_test is not None
+        assert final_verify is not None
+        assert workspace is not None
         bus.update_phase(run_id, "pr", "Creating branch and committing fix...")
         branch_name = f"teslalab-agentic-fix-{uuid.uuid4().hex[:8]}"
 
@@ -297,7 +301,8 @@ def run_pipeline(
             f"Resolved: {final_verify.resolved_findings or 'none'}, "
             f"New issues: {final_verify.new_findings or 'none'}"
         )
-        attempts_made = event_bus.get_run(run_id)["attempts"]
+        run_data = event_bus.get_run(run_id)
+        attempts_made = run_data["attempts"] if run_data else 1
 
         pr_body = (
             f"### 🤖 Automated Fix by TeslaLab Agentic Pipeline\n\n"

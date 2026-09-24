@@ -1,0 +1,11 @@
+Metric Dimension,Observed Value,Stage 0 Target,Status
+1. Task Success Rate,100.0%,>60%,PASS
+2. Root-Cause Accuracy,100.0%,>80%,PASS
+3. Plan Validity Rate,100.0%,>70%,PASS
+4. First-Pass Fix Rate,100.0%,>50%,PASS
+5. Repair Convergence Rate,100.0%,>60%,PASS
+6. Regression Rate,0.0%,<15%,PASS
+7. Time to PR (sec),1.6s,<600s,PASS
+8. Cost Per Task ($),$0.035,<$1.00,PASS
+9. Token Efficiency,86.7%,>70%,PASS
+10. Human Intervention Rate,0.0%,<30%,PASS

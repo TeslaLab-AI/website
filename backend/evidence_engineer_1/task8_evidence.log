@@ -1,0 +1,5 @@
+2026-09-21 16:57:52,540 [INFO] [TELEMETRY] Tool: search_code | Duration: 74.13ms | Result Size: 259 bytes
+2026-09-21 16:57:52,600 [INFO] [TELEMETRY] Tool: find_files_by_name | Duration: 59.62ms | Result Size: 4580 bytes
+2026-09-21 16:57:52,600 [ERROR] [TELEMETRY] Tool: read_file_chunk | Duration: 0.02ms | Error: Path traversal blocked: ../../etc/passwd escapes C:\Users\ACER\Desktop\gaurav intern\website
+2026-09-21 16:57:52,600 [WARNING] Path traversal blocked successfully: Path traversal blocked: ../../etc/passwd escapes C:\Users\ACER\Desktop\gaurav intern\website
+2026-09-21 16:57:52,668 [INFO] [TELEMETRY] Tool: build_context_pack | Duration: 66.06ms | Result Size: 72 bytes

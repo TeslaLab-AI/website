@@ -30,7 +30,7 @@ def test_verify_install_state_invalid_signature():
     with pytest.raises(HTTPException) as excinfo:
         verify_install_state(tampered_state, secret)
     assert excinfo.value.status_code == 400
-    assert "Invalid or expired state" in str(excinfo.value.detail)
+    assert "Invalid or expired state" in excinfo.value.detail
 
 def test_verify_install_state_expired():
     secret = "test_secret_123"
@@ -49,4 +49,4 @@ def test_verify_install_state_expired():
     with pytest.raises(HTTPException) as excinfo:
         verify_install_state(state, secret)
     assert excinfo.value.status_code == 400
-    assert "Invalid or expired state" in str(excinfo.value.detail)
+    assert "Invalid or expired state" in excinfo.value.detail

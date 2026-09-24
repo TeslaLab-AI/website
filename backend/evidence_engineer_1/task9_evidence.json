@@ -1,0 +1,13 @@
+{
+  "chunks": [
+    {
+      "file_path": "src/auth/handler.ts",
+      "function_name": "authenticate",
+      "content": "function authenticate(req, res) {\r\n    const token = req.headers.authorization;\r\n    if (!token) throw new Error(\"Missing token\");\r\n    // LINE 42 is here\r\n    const user = verify(token);\r\n    return user;\r\n}",
+      "start_line": 1,
+      "end_line": 7,
+      "relevance_score": 1.0
+    }
+  ],
+  "total_tokens": 63
+}

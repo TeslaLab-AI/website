@@ -39,6 +39,48 @@ class TaskStatus(str, Enum):
     RESOLVED = "resolved"
     CLOSED = "closed"
 
+class TriageSeverity(str, Enum):
+    P0 = "P0"
+    P1 = "P1"
+    P2 = "P2"
+    P3 = "P3"
+
+class TriageReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    is_reproducible: bool = Field(..., description="Whether the bug has enough info to be reproducible")
+    subsystem: str = Field(..., description="The subsystem this bug belongs to (e.g., auth, database, frontend)")
+    severity: TriageSeverity = Field(..., description="Assessed severity (P0-P3)")
+    estimated_complexity: str = Field(..., description="Estimation of complexity (e.g., low, medium, high)")
+    auto_fix_feasible: bool = Field(..., description="Whether autonomous fixing is feasible")
+    reason: str = Field(..., description="Reasoning for feasibility and severity")
+
+class Hypothesis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mechanism: str = Field(..., description="The technical theory or mechanism.")
+    supporting_evidence: List[str] = Field(default_factory=list, description="Specific lines or snippets supporting this theory.")
+    contradicting_evidence: List[str] = Field(default_factory=list, description="Specific lines or snippets that cast doubt on this theory.")
+    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in this hypothesis (0.0 to 1.0).")
+
+class RootCauseAnalysis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    # Required by Agent 2 (Planner)
+    finding_id: str = Field(..., description="Unique ID of the finding or issue")
+    title: str = Field(..., description="Short summary/title of the issue")
+    description: str = Field(..., description="Detailed description of the issue")
+    file_path: str = Field(..., description="Target file path in repository (culprit_file)")
+    line_number: int = Field(default=1, ge=1, description="Primary line number of the issue")
+    root_cause: str = Field(..., description="Root cause explanation")
+    suggested_fix: str = Field(..., description="High-level fix strategy")
+    severity: str = Field(default="Medium", description="Severity level: Low, Medium, High, Critical")
+    cwe: Optional[str] = Field(default=None, description="Optional CWE identifier")
+    
+    # Required by Task 11 (Root Cause Agent v1)
+    mechanism: str = Field(..., description="Technical mechanism of the defect (from the winning hypothesis)")
+    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in this diagnosis")
+    evidence_references: List[str] = Field(default_factory=list, description="Specific lines or snippets cited as evidence")
+    hypothesis_tree: List[Hypothesis] = Field(default_factory=list, description="List of generated hypotheses before selecting the winner.")
 
 class SessionState(str, Enum):
     CREATED = "CREATED"
@@ -95,6 +137,31 @@ class Task(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class EvidencePack(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    stack_trace: Optional[str] = Field(default=None, description="Stack trace related to the finding")
+    logs: List[str] = Field(default_factory=list, description="Relevant log lines (±50 lines around error)")
+    environment: Dict[str, Any] = Field(default_factory=dict, description="Environment metadata (Python/Node version, OS)")
+    commit_hash: str = Field(..., description="Git commit hash at time of error")
+
+class CodeChunk(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    file_path: str = Field(..., description="Path to the source file")
+    function_name: Optional[str] = Field(default=None, description="Name of the function or class block")
+    content: str = Field(..., description="Source code content")
+    start_line: int = Field(..., description="Starting line number (1-indexed)")
+    end_line: int = Field(..., description="Ending line number (1-indexed)")
+    relevance_score: float = Field(default=0.0, description="Heuristic relevance score (higher is better)")
+
+class ContextPack(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    chunks: List[CodeChunk] = Field(default_factory=list, description="Most relevant code chunks within token budget")
+    total_tokens: int = Field(default=0, description="Total tokens consumed by the context pack")
+
+
 class Session(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
@@ -102,6 +169,7 @@ class Session(BaseModel):
     task_id: str = Field(..., description="Associated task UUID")
     workspace_id: str = Field(..., description="Associated workspace UUID")
     current_state: SessionState = SessionState.CREATED
+    evidence_pack: Optional[EvidencePack] = Field(default=None, description="Collected raw evidence")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

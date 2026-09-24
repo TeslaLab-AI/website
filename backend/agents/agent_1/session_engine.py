@@ -109,6 +109,8 @@ class AgentSessionGraphState(TypedDict):
     current_state: str
     history: List[Dict[str, Any]]
     error: Optional[str]
+    triage_report: Optional[Dict[str, Any]]
+    root_cause_analysis: Optional[Dict[str, Any]]
 
 
 def create_session_graph():
@@ -145,8 +147,23 @@ def create_session_graph():
     builder.add_edge(START, SessionState.CREATED.value)
 
     # Wire forward edges
+    builder.add_edge(START, SessionState.CREATED.value)
     builder.add_edge(SessionState.CREATED.value, SessionState.TRIAGED.value)
-    builder.add_edge(SessionState.TRIAGED.value, SessionState.INVESTIGATING.value)
+    
+    def _route_after_triage(state: AgentSessionGraphState) -> str:
+        triage_report = state.get("triage_report")
+        if triage_report and not triage_report.get("auto_fix_feasible", True):
+            return SessionState.NEEDS_HUMAN.value
+        return SessionState.INVESTIGATING.value
+
+    builder.add_conditional_edges(
+        SessionState.TRIAGED.value,
+        _route_after_triage,
+        {
+            SessionState.INVESTIGATING.value: SessionState.INVESTIGATING.value,
+            SessionState.NEEDS_HUMAN.value: SessionState.NEEDS_HUMAN.value,
+        }
+    )
     builder.add_edge(SessionState.INVESTIGATING.value, SessionState.REPRODUCING.value)
     builder.add_edge(SessionState.REPRODUCING.value, SessionState.ROOT_CAUSE.value)
     builder.add_edge(SessionState.ROOT_CAUSE.value, SessionState.PLANNING.value)
