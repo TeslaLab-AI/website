@@ -1,15 +1,48 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  const next = searchParams.get('next') ?? '/dashboard'
+  let next = searchParams.get('next') ?? '/dashboard'
+
+  if (!next.startsWith('/') || next.startsWith('//')) {
+    next = '/dashboard'
+  }
+
+  const redirectUrl = new URL(next, request.url)
 
   if (token_hash && type) {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const response = NextResponse.redirect(redirectUrl)
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!url || !anonKey) {
+      return NextResponse.redirect(new URL('/login?error=Missing+auth+configuration', request.url))
+    }
+
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            try {
+              cookieStore.set(name, value, options)
+            } catch {
+              // ignore if called in immutable context
+            }
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    })
 
     const { error } = await supabase.auth.verifyOtp({
       type,
@@ -17,17 +50,13 @@ export async function GET(request: NextRequest) {
     })
 
     if (!error) {
-      // Redirect user to the authenticated dashboard
-      return NextResponse.redirect(new URL(next, request.url))
+      return response
     } else {
-      // OTP expired or already consumed (e.g. by an email scanner prefetch).
-      // Redirect to login with a clear error message.
       return NextResponse.redirect(
         new URL('/login?error=Email+link+is+invalid+or+has+expired.+If+you+already+verified,+please+try+logging+in.', request.url)
       )
     }
   }
 
-  // Missing token_hash or type — malformed confirmation link
   return NextResponse.redirect(new URL('/login?error=Could+not+verify+email', request.url))
 }

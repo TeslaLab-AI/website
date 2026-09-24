@@ -13,6 +13,15 @@ import { RepositorySelector } from '@/components/github/RepositorySelector'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { RepositoryDashboard } from '@/components/github/RepositoryDashboard'
+import { OnboardingScreen } from '@/components/auth/OnboardingScreen'
+
+interface Repo {
+  id: string
+  name: string
+  owner: string
+  default_branch: string
+  status?: string
+}
 
 export default async function DashboardPage({
   searchParams,
@@ -23,12 +32,30 @@ export default async function DashboardPage({
   const isAddingRepo = params.action === 'add_repo'
 
   const supabase = await createClient()
+
+  // Verify authenticated user & check onboarding completion status
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('id', user.id)
+      .single()
+
+    const userType = profile?.user_type || user?.user_metadata?.user_type
+
+    if (!userType) {
+      return <OnboardingScreen />
+    }
+  }
+
   const { data: workspaces } = await supabase.from('workspaces').select('*').limit(1)
   const workspace = workspaces?.[0]
-  
+
   let hasGithub = false
-  let selectedRepos: any[] = []
-  let activeRepo = null
+  let selectedRepos: Repo[] = []
+  let activeRepo: Repo | null = null
   
   if (workspace) {
     const { data: installations } = await supabase
@@ -48,7 +75,7 @@ export default async function DashboardPage({
       selectedRepos = repos || []
       
       if (params.repo_id) {
-        activeRepo = selectedRepos.find(r => r.id === params.repo_id)
+        activeRepo = selectedRepos.find(r => r.id === params.repo_id) || null
       } 
       if (!activeRepo && selectedRepos.length > 0) {
         activeRepo = selectedRepos[0]
