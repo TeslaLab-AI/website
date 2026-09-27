@@ -7,7 +7,7 @@ import openai
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 # Setup OpenAI client. Ensure OPENAI_API_KEY is in the environment
-client = openai.OpenAI()
+client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY") or "mock-key-for-dev")
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def _generate_batch(texts: list[str]) -> list[list[float]]:

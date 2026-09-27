@@ -9,13 +9,13 @@ Max 3 total attempts (per design decision).
 from __future__ import annotations
 import json
 from dataclasses import dataclass
-
+import os
 import openai
 
 from app.agents.agent_1.normalizer import NormalizedTask
 from app.agents.executor import FixPlan, FixStep
 
-client = openai.OpenAI()
+client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY") or "mock-key-for-dev")
 MAX_ATTEMPTS = 3
 
 

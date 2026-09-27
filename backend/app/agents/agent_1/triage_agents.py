@@ -14,10 +14,10 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any
-
+import os
 import openai
 
-client = openai.OpenAI()
+client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY") or "mock-key-for-dev")
 
 
 @dataclass
