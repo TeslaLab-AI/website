@@ -1,7 +1,13 @@
-import { type EmailOtpType } from '@supabase/supabase-js'
+// import { type EmailOtpType } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+// import { createClient } from '@/utils/supabase/server'
 
+/**
+ * Confirmation mail verification endpoint.
+ * Commented out for now as the confirmation mail system is temporarily disabled.
+ * Preserved for future use.
+ */
+/*
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
@@ -30,4 +36,10 @@ export async function GET(request: NextRequest) {
 
   // Missing token_hash or type — malformed confirmation link
   return NextResponse.redirect(new URL('/login?error=Could+not+verify+email', request.url))
+}
+*/
+
+export async function GET(request: NextRequest) {
+  // Confirmation mail system disabled: redirect directly to dashboard
+  return NextResponse.redirect(new URL('/dashboard', request.url))
 }
