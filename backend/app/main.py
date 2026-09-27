@@ -6,8 +6,17 @@ Responsibilities:
 - Expose GET / and GET /health so a running server can be verified immediately.
 - Mount the GitHub App installation-start route.
 """
+import logging
 import sys
 from pathlib import Path
+
+# Configure unbuffered root logging streaming to stdout for Render/Docker/local consoles
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+    force=True,
+)
 
 _backend_root = Path(__file__).resolve().parents[1]
 _repo_root = _backend_root.parent

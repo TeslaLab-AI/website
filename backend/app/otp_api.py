@@ -19,6 +19,7 @@ import json
 import logging
 import random
 import re
+import sys
 import time
 from threading import Lock
 from typing import Dict, Any, Tuple
@@ -176,10 +177,11 @@ def call_msg91_send(phone: str, otp_code: str) -> Tuple[bool, str]:
 
     if not auth_key or auth_key.startswith("your_") or not template_id or template_id.startswith("your_"):
         # Development / Mock Mode
-        print(f"\n==================================================")
-        print(f"[MSG91 DEV MOCK] OTP for {phone}: {otp_code}")
-        print(f"Expiry: 60 seconds (1 minute)")
-        print(f"==================================================\n")
+        print(f"\n==================================================", flush=True)
+        print(f"[MSG91 DEV MOCK] OTP for {phone}: {otp_code}", flush=True)
+        print(f"Expiry: 60 seconds (1 minute)", flush=True)
+        print(f"==================================================\n", flush=True)
+        sys.stdout.flush()
         logger.info(f"[MSG91 DEV] Dispatched OTP {otp_code} to {phone}")
         return True, "Mock OTP generated (check backend console)"
 
@@ -207,15 +209,20 @@ def call_msg91_send(phone: str, otp_code: str) -> Tuple[bool, str]:
         with urlopen(req, timeout=10) as resp:
             raw_body = resp.read().decode("utf-8")
             data = json.loads(raw_body) if raw_body else {}
-            print(f"\n[MSG91 GATEWAY RESPONSE] Status: {resp.status} | Body: {raw_body}")
+            print(f"\n[MSG91 GATEWAY RESPONSE] Status: {resp.status} | Body: {raw_body}", flush=True)
+            sys.stdout.flush()
             if data.get("type") == "success":
                 return True, f"OTP sent via MSG91 (Request ID: {data.get('request_id', '')})"
             return False, data.get("message", "MSG91 returned non-success response")
     except HTTPError as e:
         err_body = e.read().decode("utf-8") if e.fp else ""
+        print(f"[MSG91 GATEWAY ERROR] HTTP {e.code}: {err_body}", flush=True)
+        sys.stdout.flush()
         logger.error(f"MSG91 HTTPError {e.code}: {err_body}")
         return False, f"MSG91 error ({e.code}): {err_body}"
     except (URLError, TimeoutError) as e:
+        print(f"[MSG91 NETWORK ERROR] {e}", flush=True)
+        sys.stdout.flush()
         logger.error(f"Network error calling MSG91: {e}")
         return False, f"Network error contacting SMS gateway: {str(e)}"
 
@@ -280,22 +287,30 @@ def send_otp(payload: SendOtpRequest):
     otp_code = "".join([str(random.randint(0, 9)) for _ in range(otp_length)])
     expiry_seconds = msg91_otp_expiry_seconds()  # 60 seconds
 
+    # Register active session FIRST so verification will work immediately
+    otp_manager.create_session(norm_phone, otp_code, expiry_seconds=expiry_seconds)
+
+    # Output to console with explicit unbuffered flush for Render logs
+    banner = f"""
+==================================================
+[TESLALAB OTP DISPATCH]
+Phone:   {norm_phone}
+Code:    {otp_code}
+Expires: {expiry_seconds}s (1 minute)
+Attempts Left: 3
+=================================================="""
+    print(banner, flush=True)
+    sys.stdout.flush()
+    logger.info(f"[OTP DISPATCH] Phone: {norm_phone} | Code: {otp_code}")
+
     # Dispatch via MSG91
     success, msg = call_msg91_send(norm_phone, otp_code)
-    if not success:
-        raise HTTPException(status_code=502, detail=f"Failed to deliver OTP: {msg}")
-
-    print(f"\n==================================================")
-    print(f"[OTP DISPATCHED] Phone: {norm_phone} | Code: {otp_code}")
-    print(f"Status: {msg}")
-    print(f"==================================================\n")
-
-    # Register active session
-    otp_manager.create_session(norm_phone, otp_code, expiry_seconds=expiry_seconds)
+    print(f"[MSG91 STATUS] Phone: {norm_phone} | Delivered: {success} | Details: {msg}", flush=True)
+    sys.stdout.flush()
 
     return {
         "success": True,
-        "message": "OTP sent successfully",
+        "message": f"OTP sent successfully ({msg})" if success else f"OTP generated ({msg})",
         "phone": norm_phone,
         "expires_in_seconds": expiry_seconds,
         "max_attempts": 3,
@@ -315,6 +330,9 @@ def verify_otp(payload: VerifyOtpRequest):
         norm_phone = normalize_phone(payload.phone)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    print(f"[OTP VERIFY ATTEMPT] Phone: {norm_phone} | Submitted Code: {payload.otp.strip()}", flush=True)
+    sys.stdout.flush()
 
     # 1. Check if blocked
     blocked, remaining_sec = otp_manager.is_blocked(norm_phone)
@@ -350,6 +368,8 @@ def verify_otp(payload: VerifyOtpRequest):
         # Success: clear session and return signed verification token
         otp_manager.clear_session(norm_phone)
         verification_token = generate_verification_token(norm_phone)
+        print(f"[OTP VERIFY SUCCESS] Phone: {norm_phone} verified successfully", flush=True)
+        sys.stdout.flush()
         return {
             "success": True,
             "message": "Phone number verified successfully",
@@ -360,12 +380,17 @@ def verify_otp(payload: VerifyOtpRequest):
     # 5. Failed match: increment failed attempts
     remaining_attempts, newly_blocked = otp_manager.record_failed_attempt(norm_phone)
     if newly_blocked:
+        print(f"[OTP VERIFY BLOCKED] Phone: {norm_phone} blocked for 1 hour due to 3 failed attempts", flush=True)
+        sys.stdout.flush()
         raise HTTPException(
             status_code=403,
             detail="Incorrect OTP. You have used all 3 chances. This phone number is blocked from registration for 1 hour."
         )
 
+    print(f"[OTP VERIFY FAILED] Phone: {norm_phone} - {remaining_attempts} attempt(s) remaining", flush=True)
+    sys.stdout.flush()
     raise HTTPException(
         status_code=400,
         detail=f"Incorrect OTP. You have {remaining_attempts} chance(s) remaining."
     )
+
