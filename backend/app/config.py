@@ -66,3 +66,29 @@ def frontend_url() -> str:
     if os.environ.get("RENDER") == "true":
         raise RuntimeError("FRONTEND_URL is not configured for production deployment on Render")
     return "http://localhost:3000"
+
+
+def msg91_auth_key() -> str:
+    return os.environ.get("MSG91_AUTH_KEY", "").strip()
+
+
+def msg91_template_id() -> str:
+    return os.environ.get("MSG91_TEMPLATE_ID", "").strip()
+
+
+def msg91_sender_id() -> str:
+    return os.environ.get("MSG91_SENDER_ID", "").strip()
+
+
+def msg91_otp_expiry_seconds() -> int:
+    try:
+        return int(os.environ.get("MSG91_OTP_EXPIRY_SECONDS", "60"))
+    except ValueError:
+        return 60
+
+
+def msg91_otp_length() -> int:
+    try:
+        return int(os.environ.get("MSG91_OTP_LENGTH", "6"))
+    except ValueError:
+        return 6
