@@ -1,0 +1,122 @@
+{
+  "metrics": {
+    "task_success_rate": 1.0,
+    "root_cause_accuracy": 1.0,
+    "plan_validity_rate": 1.0,
+    "first_pass_fix_rate": 1.0,
+    "repair_convergence_rate": 1.0,
+    "regression_rate": 0.0,
+    "time_to_pr_sec": 1.56,
+    "cost_per_task_usd": 0.0355,
+    "token_efficiency": 0.8667,
+    "human_intervention_rate": 0.0,
+    "total_tasks": 10,
+    "tasks_passed": 10,
+    "benchmark_repo": "repo_stage0_benchmark",
+    "generated_at": "2026-09-23T10:21:50Z"
+  },
+  "records_count": 10,
+  "generated_at": "2026-09-23T10:21:50Z",
+  "session_records": [
+    {
+      "session_id": "unified_session_c95e394e",
+      "finding_id": "BUG-PAGINATE-01",
+      "category": "BUG",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.519,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_4851a8ad",
+      "finding_id": "BUG-ZERO-FEE-02",
+      "category": "BUG",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.347,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_55c74896",
+      "finding_id": "BUG-BOOL-FLAG-03",
+      "category": "BUG",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.684,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_ef454ec7",
+      "finding_id": "BUG-SLUG-HYPHEN-04",
+      "category": "BUG",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.334,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_1c7ce9fe",
+      "finding_id": "BUG-CHECKOUT-TOTAL-05",
+      "category": "BUG",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 2.006,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_10ca597b",
+      "finding_id": "DEP-REQ-01",
+      "category": "DEPENDENCY",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.62,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_267c60e2",
+      "finding_id": "DEP-PYD-02",
+      "category": "DEPENDENCY",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.888,
+      "cost_usd": 0.04
+    },
+    {
+      "session_id": "unified_session_d388c932",
+      "finding_id": "DEP-LODASH-03",
+      "category": "DEPENDENCY",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.558,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_a57d4c7e",
+      "finding_id": "SEC-SQLI-01",
+      "category": "SECURITY",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.433,
+      "cost_usd": 0.035
+    },
+    {
+      "session_id": "unified_session_b0f48d5e",
+      "finding_id": "SEC-HARDCODED-JWT-02",
+      "category": "SECURITY",
+      "passed": true,
+      "first_pass": true,
+      "attempts": 1,
+      "elapsed_sec": 1.195,
+      "cost_usd": 0.035
+    }
+  ]
+}

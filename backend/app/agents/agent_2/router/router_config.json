@@ -1,0 +1,79 @@
+{
+  "default_tier": "strong",
+  "tiers": {
+    "fast": {
+      "primary_model": "gpt-4o-mini",
+      "provider": "openai",
+      "fallback_model": "claude-3-5-haiku",
+      "allowed_models": [
+        "gpt-4o-mini",
+        "claude-3-5-haiku",
+        "deepseek-v3"
+      ]
+    },
+    "strong": {
+      "primary_model": "gpt-4o",
+      "provider": "openai",
+      "fallback_model": "claude-3-5-sonnet",
+      "allowed_models": [
+        "gpt-4o",
+        "claude-3-5-sonnet"
+      ]
+    },
+    "reasoning": {
+      "primary_model": "deepseek-r1",
+      "provider": "deepseek",
+      "fallback_model": "o3-mini",
+      "allowed_models": [
+        "deepseek-r1",
+        "o3-mini"
+      ]
+    }
+  },
+  "task_rules": {
+    "triage": {
+      "tier": "fast"
+    },
+    "classification": {
+      "tier": "fast"
+    },
+    "tagging": {
+      "tier": "fast"
+    },
+    "summary": {
+      "tier": "fast"
+    },
+    "file_filter": {
+      "tier": "fast"
+    },
+    "diff_inspection": {
+      "tier": "fast"
+    },
+    "planning": {
+      "tier": "strong"
+    },
+    "diagnosis": {
+      "tier": "strong"
+    },
+    "code_generation": {
+      "tier": "strong"
+    },
+    "review": {
+      "tier": "strong"
+    },
+    "complex_logic_bug": {
+      "tier": "reasoning"
+    },
+    "race_condition": {
+      "tier": "reasoning"
+    },
+    "security_exploit_analysis": {
+      "tier": "reasoning"
+    }
+  },
+  "complexity_escalations": {
+    "high": "reasoning",
+    "complex": "reasoning",
+    "critical": "reasoning"
+  }
+}

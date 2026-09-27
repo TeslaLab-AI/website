@@ -1,0 +1,207 @@
+{
+  "read_file": {
+    "additionalProperties": false,
+    "properties": {
+      "path": {
+        "description": "Repository-relative file path to read",
+        "minLength": 1,
+        "title": "Path",
+        "type": "string"
+      },
+      "start_line": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Optional starting line (1-indexed)",
+        "title": "Start Line"
+      },
+      "end_line": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Optional ending line (1-indexed)",
+        "title": "End Line"
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "title": "ReadFileArgs",
+    "type": "object"
+  },
+  "search_code": {
+    "additionalProperties": false,
+    "properties": {
+      "pattern": {
+        "description": "Search term or regex pattern",
+        "minLength": 1,
+        "title": "Pattern",
+        "type": "string"
+      },
+      "path": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Optional directory or file sub-path to scope search",
+        "title": "Path"
+      },
+      "regex": {
+        "default": false,
+        "description": "Whether pattern should be treated as regex",
+        "title": "Regex",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "pattern"
+    ],
+    "title": "SearchCodeArgs",
+    "type": "object"
+  },
+  "apply_patch": {
+    "additionalProperties": false,
+    "properties": {
+      "path": {
+        "description": "Repository-relative file path to patch",
+        "minLength": 1,
+        "title": "Path",
+        "type": "string"
+      },
+      "original_chunk": {
+        "description": "Exact snippet of original content to replace",
+        "title": "Original Chunk",
+        "type": "string"
+      },
+      "replacement_chunk": {
+        "description": "Replacement snippet",
+        "title": "Replacement Chunk",
+        "type": "string"
+      },
+      "line_number": {
+        "description": "Approximate or exact starting line number of original chunk",
+        "minimum": 1,
+        "title": "Line Number",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "path",
+      "original_chunk",
+      "replacement_chunk",
+      "line_number"
+    ],
+    "title": "ApplyPatchArgs",
+    "type": "object"
+  },
+  "run_tests": {
+    "additionalProperties": false,
+    "properties": {
+      "test_command": {
+        "description": "Test command to execute",
+        "minLength": 1,
+        "title": "Test Command",
+        "type": "string"
+      },
+      "timeout_seconds": {
+        "default": 60,
+        "description": "Execution timeout in seconds",
+        "exclusiveMinimum": 0,
+        "maximum": 600,
+        "title": "Timeout Seconds",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "test_command"
+    ],
+    "title": "RunTestsArgs",
+    "type": "object"
+  },
+  "run_command": {
+    "additionalProperties": false,
+    "properties": {
+      "command": {
+        "description": "Shell command to run",
+        "minLength": 1,
+        "title": "Command",
+        "type": "string"
+      },
+      "timeout_seconds": {
+        "default": 60,
+        "description": "Execution timeout in seconds",
+        "exclusiveMinimum": 0,
+        "maximum": 600,
+        "title": "Timeout Seconds",
+        "type": "integer"
+      },
+      "cwd": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Optional working directory relative to workspace root",
+        "title": "Cwd"
+      }
+    },
+    "required": [
+      "command"
+    ],
+    "title": "RunCommandArgs",
+    "type": "object"
+  },
+  "open_pr": {
+    "additionalProperties": false,
+    "properties": {
+      "title": {
+        "description": "Title of the pull request",
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      },
+      "branch": {
+        "description": "Name of the head branch",
+        "minLength": 1,
+        "title": "Branch",
+        "type": "string"
+      },
+      "body": {
+        "description": "Pull request body/description",
+        "minLength": 1,
+        "title": "Body",
+        "type": "string"
+      }
+    },
+    "required": [
+      "title",
+      "branch",
+      "body"
+    ],
+    "title": "OpenPrArgs",
+    "type": "object"
+  }
+}

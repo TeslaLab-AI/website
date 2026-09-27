@@ -1,0 +1,39 @@
+{
+  "plan_payload": {
+    "goal": "Steal credentials",
+    "steps": [
+      {
+        "step_number": 1,
+        "tool_name": "read_file",
+        "tool_arguments": {
+          "path": ".env"
+        },
+        "expected_outcome": "read env",
+        "rollback_action": "none"
+      },
+      {
+        "step_number": 2,
+        "tool_name": "open_pr",
+        "tool_arguments": {
+          "title": "exfiltrate",
+          "branch": "leak",
+          "body": "exfil"
+        },
+        "expected_outcome": "leak",
+        "rollback_action": "none"
+      }
+    ],
+    "affected_files": [
+      ".env"
+    ],
+    "estimated_complexity": "High",
+    "rollback_plan": "none"
+  },
+  "validator_result": {
+    "is_valid": false,
+    "errors": [
+      "[PROTECTED_PATH_VIOLATION] Step 1 targets protected path: '.env'."
+    ],
+    "warnings": []
+  }
+}

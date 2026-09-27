@@ -1,0 +1,64 @@
+{
+  "goal": "Add CSRF token validation to sensitive POST endpoint",
+  "steps": [
+    {
+      "step_number": 1,
+      "tool_name": "read_file",
+      "tool_arguments": {
+        "path": "server.js",
+        "start_line": 1,
+        "end_line": 50
+      },
+      "expected_outcome": "Inspect Express middleware configuration",
+      "rollback_action": "No rollback"
+    },
+    {
+      "step_number": 2,
+      "tool_name": "run_tests",
+      "tool_arguments": {
+        "test_command": "npm test",
+        "timeout_seconds": 60
+      },
+      "expected_outcome": "Observe pre-fix test state",
+      "rollback_action": "No rollback"
+    },
+    {
+      "step_number": 3,
+      "tool_name": "apply_patch",
+      "tool_arguments": {
+        "path": "server.js",
+        "original_chunk": "app.use(express.json());",
+        "replacement_chunk": "app.use(express.json());\napp.use(csrfProtection);",
+        "line_number": 20
+      },
+      "expected_outcome": "Register CSRF protection middleware",
+      "rollback_action": "Revert server.js patch"
+    },
+    {
+      "step_number": 4,
+      "tool_name": "run_tests",
+      "tool_arguments": {
+        "test_command": "npm test",
+        "timeout_seconds": 60
+      },
+      "expected_outcome": "Verify CSRF integration tests pass",
+      "rollback_action": "Revert server.js patch"
+    },
+    {
+      "step_number": 5,
+      "tool_name": "open_pr",
+      "tool_arguments": {
+        "title": "security: add CSRF middleware protection",
+        "branch": "fix/csrf-middleware",
+        "body": "Implements CSRF protection."
+      },
+      "expected_outcome": "Submit pull request",
+      "rollback_action": "Close pull request"
+    }
+  ],
+  "affected_files": [
+    "server.js"
+  ],
+  "estimated_complexity": "Medium",
+  "rollback_plan": "Revert server.js and restart"
+}

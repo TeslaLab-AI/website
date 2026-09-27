@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-09-23T10:21:56Z",
+  "total_scenarios": 4,
+  "all_passed": true,
+  "scenarios": [
+    {
+      "scenario_id": "DEMO-01-BUG",
+      "scenario_type": "AUTOMATED_BUG",
+      "finding_id": "BUG-PAGINATE-01",
+      "title": "Live Scenario 1: Closed-Loop Automated Bug Fix to PR",
+      "status": "SUCCESS",
+      "duration_sec": 1.221,
+      "pr_branch": "fix/bug-paginate-01",
+      "pr_title": "fix(BUG-PAGINATE-01): resolve Off-by-one boundary calculation in catalog pagination slice",
+      "summary": "Autonomously resolved catalog pagination slice off-by-one boundary defect and opened PR."
+    },
+    {
+      "scenario_id": "DEMO-02-DEP",
+      "scenario_type": "DEPENDENCY_UPGRADE",
+      "finding_id": "DEP-REQ-01",
+      "title": "Live Scenario 2: Autonomous Dependency Security Upgrade to PR",
+      "status": "SUCCESS",
+      "duration_sec": 1.188,
+      "pr_branch": "fix/dep-req-01",
+      "pr_title": "fix(DEP-REQ-01): resolve CVE-2023-32681: Outdated requests 2.25.1 vulnerability",
+      "summary": "Upgraded requests 2.25.1 -> 2.31.0 in pyproject.toml resolving CVE-2023-32681."
+    },
+    {
+      "scenario_id": "DEMO-03-SEC",
+      "scenario_type": "SECURITY_FIX",
+      "finding_id": "SEC-SQLI-01",
+      "title": "Live Scenario 3: SAST Security Vulnerability Remediation to PR",
+      "status": "SUCCESS",
+      "duration_sec": 1.151,
+      "pr_branch": "fix/sec-sqli-01",
+      "pr_title": "fix(SEC-SQLI-01): resolve CWE-89: SQL Injection in user tier query",
+      "summary": "Remediated CWE-89 SQL injection vulnerability using parameterized query placeholders."
+    },
+    {
+      "scenario_id": "DEMO-04-MANUAL",
+      "scenario_type": "MANUAL_DRIVE",
+      "finding_id": "BUG-ZERO-FEE-02",
+      "title": "Live Scenario 4: Human-in-the-Loop Manual Control Drive with Plan Editing",
+      "status": "SUCCESS",
+      "duration_sec": 1.22,
+      "pr_branch": "fix/bug-zero-fee-02",
+      "pr_title": "fix(BUG-ZERO-FEE-02): resolve Fee calculator returns negative value on zero amount",
+      "summary": "Drove full manual control lifecycle through all 7 actions with human plan modification."
+    }
+  ]
+}

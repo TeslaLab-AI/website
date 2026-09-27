@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-09-22T08:15:56Z",
+  "total_findings_processed": 6,
+  "findings_passed": 6,
+  "zero_category_conditionals": true,
+  "findings": [
+    {
+      "finding_id": "BUG-PAGINATE-01",
+      "category": "BUG",
+      "title": "Off-by-one boundary calculation in catalog pagination slice",
+      "target_files": [
+        "src/catalog/paginate.py"
+      ],
+      "stage": "COMPLETE",
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "diagnosis": "Off-by-one boundary calculation in catalog pagination slice: end boundary omitted the 5th item.",
+      "verdict": "PASS",
+      "score": 1.0,
+      "pr_title": "fix(BUG-PAGINATE-01): resolve Off-by-one boundary calculation in catalog pagination slice",
+      "pr_branch": "fix/bug-paginate-01",
+      "current_diff": "--- a/src/catalog/paginate.py\n+++ b/src/catalog/paginate.py\n@@ -3,3 +3,3 @@\n     start = (page - 1) * page_size\n-    end = start + (page_size - 1)\n+    end = start + page_size\n     return items[start:end]\n"
+    },
+    {
+      "finding_id": "BUG-ZERO-FEE-02",
+      "category": "BUG",
+      "title": "Fee calculator returns negative value on zero amount",
+      "target_files": [
+        "src/payment/client.py"
+      ],
+      "stage": "COMPLETE",
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "diagnosis": "Fee calculator fails to handle zero/negative amounts, returning a negative fee value.",
+      "verdict": "PASS",
+      "score": 1.0,
+      "pr_title": "fix(BUG-ZERO-FEE-02): resolve Fee calculator returns negative value on zero amount",
+      "pr_branch": "fix/bug-zero-fee-02",
+      "current_diff": "--- a/src/payment/client.py\n+++ b/src/payment/client.py\n@@ -1,3 +1,3 @@\n def calculate_fee(amount: float) -> float:\n-    return -1.0 if amount <= 0.0 else amount * 0.02\n+    return 0.0 if amount <= 0.0 else amount * 0.02\n"
+    },
+    {
+      "finding_id": "BUG-BOOL-FLAG-03",
+      "category": "BUG",
+      "title": "Inverted boolean validation in auth token checker",
+      "target_files": [
+        "src/auth/validator.py"
+      ],
+      "stage": "COMPLETE",
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "diagnosis": "Inverted boolean condition in token validator: returns False for valid tokens.",
+      "verdict": "PASS",
+      "score": 1.0,
+      "pr_title": "fix(BUG-BOOL-FLAG-03): resolve Inverted boolean validation in auth token checker",
+      "pr_branch": "fix/bug-bool-flag-03",
+      "current_diff": "--- a/src/auth/validator.py\n+++ b/src/auth/validator.py\n@@ -2,4 +2,4 @@\n     if not token or len(token) < 8:\n-        return True\n-    return False\n+        return False\n+    return True\n"
+    },
+    {
+      "finding_id": "DEP-REQ-01",
+      "category": "DEPENDENCY",
+      "title": "CVE-2023-32681: Outdated requests 2.25.1 vulnerability",
+      "target_files": [
+        "pyproject.toml"
+      ],
+      "stage": "COMPLETE",
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "diagnosis": "CVE-2023-32681: Outdated requests 2.25.1 vulnerability leaks Proxy-Authorization header.",
+      "verdict": "PASS",
+      "score": 1.0,
+      "pr_title": "fix(DEP-REQ-01): resolve CVE-2023-32681: Outdated requests 2.25.1 vulnerability",
+      "pr_branch": "fix/dep-req-01",
+      "current_diff": "--- a/pyproject.toml\n+++ b/pyproject.toml\n@@ -5,3 +5,3 @@\n-    \"requests==2.25.1\",\n+    \"requests==2.31.0\",\n"
+    },
+    {
+      "finding_id": "DEP-PYD-02",
+      "category": "DEPENDENCY",
+      "title": "Pydantic V1 -> V2 breaking API upgrade",
+      "target_files": [
+        "requirements.txt",
+        "src/models/user.py"
+      ],
+      "stage": "COMPLETE",
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "diagnosis": "Pydantic V1 -> V2 breaking API upgrade: parse_obj() deprecated in favor of model_validate().",
+      "verdict": "PASS",
+      "score": 1.0,
+      "pr_title": "fix(DEP-PYD-02): resolve Pydantic V1 -> V2 breaking API upgrade",
+      "pr_branch": "fix/dep-pyd-02",
+      "current_diff": "--- a/requirements.txt\n+++ b/requirements.txt\n@@ -1,2 +1,2 @@\n-pydantic==1.8.2\n+pydantic==2.4.2\n--- a/src/models/user.py\n+++ b/src/models/user.py\n@@ -7,3 +7,3 @@\n-    return UserModel.parse_obj(data)\n+    return UserModel.model_validate(data)\n"
+    },
+    {
+      "finding_id": "SEC-SQLI-01",
+      "category": "SECURITY",
+      "title": "CWE-89: SQL Injection in user tier query",
+      "target_files": [
+        "src/db/user_repo.py"
+      ],
+      "stage": "COMPLETE",
+      "execution_trace": [
+        "ANALYSIS",
+        "PLANNER",
+        "EXECUTOR",
+        "TESTING",
+        "VALIDATION",
+        "PR",
+        "COMPLETE"
+      ],
+      "diagnosis": "CWE-89: Dynamic string formatting in SQL query constructor introduces SQL injection vulnerability.",
+      "verdict": "PASS",
+      "score": 1.0,
+      "pr_title": "fix(SEC-SQLI-01): resolve CWE-89: SQL Injection in user tier query",
+      "pr_branch": "fix/sec-sqli-01",
+      "current_diff": "--- a/src/db/user_repo.py\n+++ b/src/db/user_repo.py\n@@ -1,4 +1,4 @@\n-    cursor.execute(f\"SELECT * FROM users WHERE tier = '{tier_name}'\")\n+    cursor.execute(\"SELECT * FROM users WHERE tier = ?\", (tier_name,))\n"
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+"""
+Agent 2 (Engineer 2) — Planning & Execution Package.
+
+Provides:
+- ExecutionPlan, PlanStep, StepOutcome
+- Tool argument models (ReadFileArgs, SearchCodeArgs, ApplyPatchArgs, RunTestsArgs, RunCommandArgs, OpenPrArgs)
+- ToolResolver, default_resolver, UnknownToolError
+- PlanValidator, ValidationResult, default_validator
+- PlannerAgent, RootCauseAnalysis, ContextPack, default_planner
+- execution_plan_to_fix_plan, fix_plan_to_execution_plan
+"""
+
+from app.agents.agent_2.plan_schema import (
+    ALLOWED_TOOLS,
+    AllowedToolName,
+    ReadFileArgs,
+    SearchCodeArgs,
+    ApplyPatchArgs,
+    RunTestsArgs,
+    RunCommandArgs,
+    OpenPrArgs,
+    PlanStep,
+    ExecutionPlan,
+    StepOutcome,
+    TOOL_ARGUMENT_MODELS,
+)
+from app.agents.agent_2.tool_resolver import (
+    ToolResolver,
+    UnknownToolError,
+    ToolArgumentValidationError,
+    default_resolver,
+)
+from app.agents.agent_2.validator import (
+    PlanValidator,
+    ValidationResult,
+    default_validator,
+)
+from app.agents.agent_2.planner import (
+    PlannerAgent,
+    RootCauseAnalysis,
+    ContextPack,
+    default_planner,
+)
+from app.agents.agent_2.adapter import (
+    execution_plan_to_fix_plan,
+    fix_plan_to_execution_plan,
+)
+from app.agents.agent_2.gateway import (
+    LLMGateway,
+    default_gateway,
+    complete,
+    LLMResponse,
+    TokenUsage,
+    LLMMessage,
+    LLMError,
+    LLMRateLimitError,
+    LLMServerError,
+    BaseLLMAdapter,
+)
+from app.agents.agent_2.router import (
+    ModelRouter,
+    default_router,
+    get_model_for_task,
+    ModelRoute,
+    ModelTier,
+    RouterConfig,
+)
+from app.agents.agent_2.cost import (
+    ModelPricing,
+    PricingRegistry,
+    default_pricing_registry,
+    CostBreakdown,
+    CostCalculator,
+    default_calculator,
+    CostRecord,
+    SessionCostSummary,
+    CostTracker,
+    default_cost_tracker,
+    SessionCostState,
+    SessionCostManager,
+    default_session_manager,
+    BudgetEnforcer,
+    BudgetCutoffEvent,
+    BudgetExceededError,
+    default_budget_enforcer,
+    CostPersistenceService,
+    default_persistence_service,
+)
+from app.agents.agent_2.benchmarks import (
+    BenchmarkCase,
+    SEEDED_BENCHMARK_CASES,
+    get_seeded_benchmarks,
+    get_benchmark_by_id,
+)
+from app.agents.agent_2.benchmark_runner import (
+    BenchmarkCaseResult,
+    BatchRunSummary,
+    run_planner_e2e_benchmark,
+    build_benchmark_gateway,
+)
+from app.agents.agent_2.tool_registry import (
+    ToolPermission,
+    ToolResult,
+    FindFilesArgs,
+    GetSymbolDefinitionArgs,
+    RegisteredTool,
+    ToolRegistry,
+    default_registry,
+    create_default_tool_registry,
+)
+from app.agents.agent_2.sandbox import (
+    CommandResult,
+    DockerSandboxDriver,
+    SubprocessFallbackSandbox,
+    Sandbox,
+    default_sandbox,
+    is_docker_available,
+    DockerUnavailableError,
+    SandboxSecurityViolationError,
+)
+
+from app.agents.tester import (
+    TestRunner,
+    TestSuiteResult,
+    TestFailure,
+)
+from app.agents.agent_2.execution_safety import (
+    ExecutionSafety,
+    SafetyViolationError,
+    SafetyViolation,
+    GuardType,
+)
+
+__all__ = [
+    "ALLOWED_TOOLS",
+    "AllowedToolName",
+    "ReadFileArgs",
+    "SearchCodeArgs",
+    "ApplyPatchArgs",
+    "RunTestsArgs",
+    "RunCommandArgs",
+    "OpenPrArgs",
+    "PlanStep",
+    "ExecutionPlan",
+    "StepOutcome",
+    "TOOL_ARGUMENT_MODELS",
+    "ToolResolver",
+    "UnknownToolError",
+    "ToolArgumentValidationError",
+    "default_resolver",
+    "PlanValidator",
+    "ValidationResult",
+    "default_validator",
+    "PlannerAgent",
+    "RootCauseAnalysis",
+    "ContextPack",
+    "default_planner",
+    "execution_plan_to_fix_plan",
+    "fix_plan_to_execution_plan",
+    "LLMGateway",
+    "default_gateway",
+    "complete",
+    "LLMResponse",
+    "TokenUsage",
+    "LLMMessage",
+    "LLMError",
+    "LLMRateLimitError",
+    "LLMServerError",
+    "BaseLLMAdapter",
+    "ModelRouter",
+    "default_router",
+    "get_model_for_task",
+    "ModelRoute",
+    "ModelTier",
+    "RouterConfig",
+    "ModelPricing",
+    "PricingRegistry",
+    "default_pricing_registry",
+    "CostBreakdown",
+    "CostCalculator",
+    "default_calculator",
+    "CostRecord",
+    "SessionCostSummary",
+    "CostTracker",
+    "default_cost_tracker",
+    "SessionCostState",
+    "SessionCostManager",
+    "default_session_manager",
+    "BudgetEnforcer",
+    "BudgetCutoffEvent",
+    "BudgetExceededError",
+    "default_budget_enforcer",
+    "CostPersistenceService",
+    "default_persistence_service",
+    "BenchmarkCase",
+    "SEEDED_BENCHMARK_CASES",
+    "get_seeded_benchmarks",
+    "get_benchmark_by_id",
+    "BenchmarkCaseResult",
+    "BatchRunSummary",
+    "run_planner_e2e_benchmark",
+    "build_benchmark_gateway",
+    "ToolPermission",
+    "ToolResult",
+    "FindFilesArgs",
+    "GetSymbolDefinitionArgs",
+    "RegisteredTool",
+    "ToolRegistry",
+    "default_registry",
+    "create_default_tool_registry",
+    "CommandResult",
+    "DockerSandboxDriver",
+    "SubprocessFallbackSandbox",
+    "Sandbox",
+    "default_sandbox",
+    "is_docker_available",
+    "DockerUnavailableError",
+    "SandboxSecurityViolationError",
+    "TestRunner",
+    "TestSuiteResult",
+    "TestFailure",
+    "ExecutionSafety",
+    "SafetyViolationError",
+    "SafetyViolation",
+    "GuardType",
+]

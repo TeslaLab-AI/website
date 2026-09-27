@@ -1,0 +1,62 @@
+[
+  {
+    "finding_id": "BUG-001",
+    "duration": 3.4780092239379883,
+    "triage_report": {
+      "is_reproducible": true,
+      "subsystem": "database",
+      "severity": "P1",
+      "estimated_complexity": "medium",
+      "auto_fix_feasible": false,
+      "reason": "The bug is reproducible with a clear stack trace indicating a database connection issue under load. However, it likely requires human context to assess the underlying architecture and connection management, making automated fixes infeasible."
+    }
+  },
+  {
+    "finding_id": "BUG-002",
+    "duration": 1.6622052192687988,
+    "triage_report": {
+      "is_reproducible": false,
+      "subsystem": "frontend",
+      "severity": "P2",
+      "estimated_complexity": "medium",
+      "auto_fix_feasible": false,
+      "reason": "The bug lacks sufficient information and a stack trace to confirm its existence, making it non-reproducible. Additionally, it may require human context to understand user interactions."
+    }
+  },
+  {
+    "finding_id": "BUG-003",
+    "duration": 2.0324668884277344,
+    "triage_report": {
+      "is_reproducible": true,
+      "subsystem": "frontend",
+      "severity": "P1",
+      "estimated_complexity": "Medium",
+      "auto_fix_feasible": true,
+      "reason": "The bug has a clear stack trace indicating a TypeError in the frontend code, making it reproducible. The severity is high due to the crash affecting user experience, and the complexity is medium as it likely involves checking for undefined values before accessing properties. Automated fixes are feasible."
+    }
+  },
+  {
+    "finding_id": "BUG-004",
+    "duration": 1.8409388065338135,
+    "triage_report": {
+      "is_reproducible": false,
+      "subsystem": "unknown",
+      "severity": "P3",
+      "estimated_complexity": "Low",
+      "auto_fix_feasible": false,
+      "reason": "The bug lacks sufficient information and a stack trace to determine its nature, making it non-reproducible. The vague description suggests a low severity, but without details, it cannot be addressed automatically."
+    }
+  },
+  {
+    "finding_id": "BUG-005",
+    "duration": 1.433758020401001,
+    "triage_report": {
+      "is_reproducible": false,
+      "subsystem": "infrastructure",
+      "severity": "P1",
+      "estimated_complexity": "High",
+      "auto_fix_feasible": false,
+      "reason": "The bug lacks sufficient information and a stack trace, making it non-reproducible. It requires significant architectural changes to migrate from Redis to Memcached, which is complex and not suitable for automated remediation."
+    }
+  }
+]

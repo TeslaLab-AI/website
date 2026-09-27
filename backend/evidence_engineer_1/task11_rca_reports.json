@@ -1,0 +1,103 @@
+[
+  {
+    "finding_id": "FINDING-BUG-001",
+    "duration": 4.679108142852783,
+    "rca": {
+      "finding_id": "FINDING-BUG-001",
+      "title": "Null pointer dereference in auth handler",
+      "description": "The issue arises from the lack of a null check on the access token in the authentication handler. When the authorization header is not present in the request, the code attempts to split a null value, leading to an uncaught exception under high load when multiple requests are processed simultaneously.",
+      "file_path": "src/auth/handler.ts",
+      "line_number": 3,
+      "root_cause": "The root cause of the issue is the absence of a null check for the 'authorization' header in the 'authenticate' function. If the header is missing, 'token' becomes null, and calling 'split' on it results in a TypeError.",
+      "suggested_fix": "Implement a null check for the 'authorization' header before attempting to split it. If the header is not present, return an appropriate error response or handle the case gracefully.",
+      "severity": "Critical",
+      "cwe": "CWE-476",
+      "mechanism": "The mechanism of the defect is that the code assumes the presence of the 'authorization' header without validation. This leads to a null pointer dereference when the header is absent, causing the application to crash under load.",
+      "confidence_score": 0.95,
+      "evidence_references": [
+        "line 3: const parts = token.split(' ');",
+        "line 2: const token = req.headers.authorization;"
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-BUG-002",
+    "duration": 3.876554012298584,
+    "rca": {
+      "finding_id": "FINDING-BUG-002",
+      "title": "Race condition in session cache",
+      "description": "The issue arises when multiple asynchronous calls to the `refresh` function attempt to update the global `cache` object simultaneously, leading to inconsistent or corrupted entries in the cache.",
+      "file_path": "src/cache/session.ts",
+      "line_number": 4,
+      "root_cause": "The root cause of the race condition is the lack of synchronization when multiple instances of the `refresh` function are called concurrently. Each instance fetches a token and attempts to assign it to the `cache` object without any locking mechanism, which can result in overwriting values and corrupting the cache.",
+      "suggested_fix": "Implement a locking mechanism or use a queue to ensure that only one instance of the `refresh` function can update the cache at a time, preventing simultaneous writes.",
+      "severity": "Critical",
+      "cwe": "CWE-362",
+      "mechanism": "The race condition occurs because the `cache` object is a shared resource accessed by multiple asynchronous operations without any form of synchronization, leading to potential overwrites and data corruption.",
+      "confidence_score": 0.95,
+      "evidence_references": [
+        "line 4: cache[id] = val;"
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-BUG-003",
+    "duration": 4.905099391937256,
+    "rca": {
+      "finding_id": "FINDING-BUG-003",
+      "title": "Off-by-one error in pagination slice",
+      "description": "The pagination logic in the getPage function incorrectly calculates the end index for slicing the results array, leading to the last record being truncated.",
+      "file_path": "src/api/paginate.ts",
+      "line_number": 3,
+      "root_cause": "The calculation of the 'end' index in the getPage function is incorrect. It subtracts 1 from the total size, which causes the last record to be excluded from the results returned by the slice method.",
+      "suggested_fix": "Change the calculation of the 'end' variable from 'start + size - 1' to 'start + size' to include the last record in the pagination results.",
+      "severity": "High",
+      "cwe": "CWE-129",
+      "mechanism": "The off-by-one error occurs because the slice method in JavaScript is exclusive of the end index. By incorrectly calculating the end index, the last item in the results array is not included in the returned slice.",
+      "confidence_score": 0.95,
+      "evidence_references": [
+        "line 3: const end = start + size - 1; // Bug: should be start + size"
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-SEC-001",
+    "duration": 5.3216094970703125,
+    "rca": {
+      "finding_id": "FINDING-SEC-001",
+      "title": "Hardcoded cryptographic fallback key",
+      "description": "The issue arises from a hardcoded HMAC key in the source code, which is exposed in a client-accessible bundle. This can lead to security vulnerabilities as the key can be easily extracted and misused.",
+      "file_path": "src/crypto/jwt.ts",
+      "line_number": 1,
+      "root_cause": "The root cause of the issue is the hardcoding of the HMAC key in the source code, which makes it accessible to anyone who can access the client bundle. This violates best practices for handling sensitive information such as cryptographic keys.",
+      "suggested_fix": "Replace the hardcoded key with a secure key management solution or environment variable that is not exposed in the client bundle.",
+      "severity": "Critical",
+      "cwe": "CWE-798",
+      "mechanism": "The mechanism of the defect is that the constant 'FALLBACK_KEY' is directly exported and can be accessed by any client code that imports this module, allowing potential attackers to retrieve the key and compromise the security of the HMAC signing process.",
+      "confidence_score": 0.95,
+      "evidence_references": [
+        "Line 1: export const FALLBACK_KEY = 'super_secret_dev_key_123'; // Bug: hardcoded secret"
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-BUG-005",
+    "duration": 4.201793432235718,
+    "rca": {
+      "finding_id": "FINDING-BUG-005",
+      "title": "Uncaught JSON parse error",
+      "description": "The application fails when an external API returns invalid HTML instead of JSON, leading to an uncaught SyntaxError during JSON parsing.",
+      "file_path": "src/api/external.ts",
+      "line_number": 4,
+      "root_cause": "The root cause of the issue is that the code does not handle the case where the response from the API is not valid JSON. When the API returns invalid HTML, the JSON.parse function throws a SyntaxError, which is not caught, resulting in an uncaught exception.",
+      "suggested_fix": "Implement error handling around the JSON.parse call to catch SyntaxErrors and handle them appropriately, such as returning a default value or throwing a custom error.",
+      "severity": "Critical",
+      "cwe": "CWE-JSON-Parsing-Error",
+      "mechanism": "The mechanism of the defect lies in the assumption that the response from the fetch call will always be valid JSON. The code directly attempts to parse the response without validating its content type or checking for errors in the response, leading to a failure when the response is not in the expected format.",
+      "confidence_score": 0.95,
+      "evidence_references": [
+        "4"
+      ]
+    }
+  }
+]

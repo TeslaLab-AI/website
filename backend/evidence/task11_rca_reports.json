@@ -1,0 +1,196 @@
+[
+  {
+    "finding_id": "FINDING-BUG-001",
+    "duration": 4.845868110656738,
+    "rca": {
+      "finding_id": "FINDING-BUG-001",
+      "title": "Null pointer dereference in auth handler",
+      "description": "Unchecked access token header leads to uncaught exception under high load.",
+      "file_path": "src/auth/handler.ts",
+      "line_number": 3,
+      "root_cause": "The code does not check if the 'authorization' header is present, leading to a null pointer dereference when the header is missing.",
+      "suggested_fix": "Add a null check for the 'authorization' header before attempting to split it.",
+      "severity": "P1",
+      "cwe": "CWE-476",
+      "mechanism": "Missing validation of input data (authorization header) leading to null dereference.",
+      "confidence_score": 0.9,
+      "evidence_references": [
+        "Line 3: const token = req.headers.authorization;",
+        "Line 4: const parts = token.split(' ');"
+      ],
+      "hypothesis_tree": [
+        {
+          "mechanism": "Missing validation of input data (authorization header) leading to null dereference.",
+          "supporting_evidence": [
+            "Line 3: const token = req.headers.authorization;",
+            "Line 4: const parts = token.split(' ');"
+          ],
+          "contradicting_evidence": [],
+          "confidence_score": 0.9
+        },
+        {
+          "mechanism": "Race condition due to high load causing intermittent failures.",
+          "supporting_evidence": [],
+          "contradicting_evidence": [
+            "The bug is reproducible under high load, but the code does not show any signs of race conditions."
+          ],
+          "confidence_score": 0.3
+        }
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-BUG-002",
+    "duration": 3.8963589668273926,
+    "rca": {
+      "finding_id": "FINDING-BUG-002",
+      "title": "Race condition in session cache",
+      "description": "Simultaneous token refresh corrupts memory cache entries.",
+      "file_path": "src/cache/session.ts",
+      "line_number": 4,
+      "root_cause": "The race condition occurs because multiple asynchronous calls to the refresh function can overwrite the cache entry for the same id before the previous call has completed.",
+      "suggested_fix": "Implement a locking mechanism or use a more robust caching strategy to prevent simultaneous writes to the cache.",
+      "severity": "P1",
+      "cwe": null,
+      "mechanism": "Race condition due to simultaneous asynchronous operations modifying shared state.",
+      "confidence_score": 0.9,
+      "evidence_references": [
+        "Line 4: cache[id] = val;"
+      ],
+      "hypothesis_tree": [
+        {
+          "mechanism": "Race condition due to simultaneous asynchronous operations modifying shared state.",
+          "supporting_evidence": [
+            "Line 4: cache[id] = val;"
+          ],
+          "contradicting_evidence": [],
+          "confidence_score": 0.9
+        },
+        {
+          "mechanism": "Logical error in cache management.",
+          "supporting_evidence": [],
+          "contradicting_evidence": [
+            "Line 4: cache[id] = val;"
+          ],
+          "confidence_score": 0.3
+        }
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-BUG-003",
+    "duration": 4.717051267623901,
+    "rca": {
+      "finding_id": "FINDING-BUG-003",
+      "title": "Off-by-one error in pagination slice",
+      "description": "Page bounds check incorrectly truncates the last result record.",
+      "file_path": "src/api/paginate.ts",
+      "line_number": 4,
+      "root_cause": "The calculation of the 'end' index in the pagination logic is incorrect, leading to an off-by-one error.",
+      "suggested_fix": "Change the calculation of 'end' from 'start + size - 1' to 'start + size' to include the last record.",
+      "severity": "P1",
+      "cwe": null,
+      "mechanism": "Logical error in index calculation for slicing the results array.",
+      "confidence_score": 1.0,
+      "evidence_references": [
+        "Line 4: const end = start + size - 1; // Bug: should be start + size"
+      ],
+      "hypothesis_tree": [
+        {
+          "mechanism": "Logical error in index calculation for slicing the results array.",
+          "supporting_evidence": [
+            "Line 4: const end = start + size - 1; // Bug: should be start + size"
+          ],
+          "contradicting_evidence": [],
+          "confidence_score": 1.0
+        },
+        {
+          "mechanism": "Incorrect handling of edge cases in pagination logic.",
+          "supporting_evidence": [],
+          "contradicting_evidence": [
+            "The current implementation does not handle edge cases, but the primary issue is the off-by-one error."
+          ],
+          "confidence_score": 0.5
+        }
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-SEC-001",
+    "duration": 4.9127037525177,
+    "rca": {
+      "finding_id": "FINDING-SEC-001",
+      "title": "Hardcoded cryptographic fallback key",
+      "description": "Fallback HMAC key exposed in client-accessible bundle constants.",
+      "file_path": "src/crypto/jwt.ts",
+      "line_number": 1,
+      "root_cause": "The fallback HMAC key is hardcoded in the source code, making it accessible to anyone who can access the client bundle.",
+      "suggested_fix": "Replace the hardcoded key with a secure key management solution or environment variable.",
+      "severity": "P1",
+      "cwe": "CWE-798",
+      "mechanism": "Hardcoded secret in source code",
+      "confidence_score": 1.0,
+      "evidence_references": [
+        "Line 1: export const FALLBACK_KEY = 'super_secret_dev_key_123'; // Bug: hardcoded secret"
+      ],
+      "hypothesis_tree": [
+        {
+          "mechanism": "Hardcoded secret in source code",
+          "supporting_evidence": [
+            "Line 1: export const FALLBACK_KEY = 'super_secret_dev_key_123'; // Bug: hardcoded secret"
+          ],
+          "contradicting_evidence": [],
+          "confidence_score": 1.0
+        },
+        {
+          "mechanism": "Misconfiguration in deployment",
+          "supporting_evidence": [],
+          "contradicting_evidence": [
+            "The key is explicitly defined in the source code, indicating it is not a deployment issue."
+          ],
+          "confidence_score": 0.2
+        }
+      ]
+    }
+  },
+  {
+    "finding_id": "FINDING-BUG-005",
+    "duration": 4.609847068786621,
+    "rca": {
+      "finding_id": "FINDING-BUG-005",
+      "title": "Uncaught JSON parse error",
+      "description": "Fails when external API returns invalid HTML instead of JSON.",
+      "file_path": "src/api/external.ts",
+      "line_number": 3,
+      "root_cause": "The code does not handle the case where the response is not valid JSON, leading to an uncaught SyntaxError.",
+      "suggested_fix": "Implement error handling for JSON parsing to manage invalid responses gracefully.",
+      "severity": "P1",
+      "cwe": null,
+      "mechanism": "Missing error handling for JSON parsing.",
+      "confidence_score": 0.9,
+      "evidence_references": [
+        "Line 3: const data = JSON.parse(await res.text()); // Bug: can throw SyntaxError"
+      ],
+      "hypothesis_tree": [
+        {
+          "mechanism": "Missing error handling for JSON parsing.",
+          "supporting_evidence": [
+            "Line 3: const data = JSON.parse(await res.text()); // Bug: can throw SyntaxError"
+          ],
+          "contradicting_evidence": [],
+          "confidence_score": 0.9
+        },
+        {
+          "mechanism": "Invalid response format from external API.",
+          "supporting_evidence": [
+            "Description: Fails when external API returns invalid HTML instead of JSON."
+          ],
+          "contradicting_evidence": [
+            "No specific handling for different response types in the code."
+          ],
+          "confidence_score": 0.7
+        }
+      ]
+    }
+  }
+]

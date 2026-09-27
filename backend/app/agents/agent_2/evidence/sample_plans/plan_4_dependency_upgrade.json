@@ -1,0 +1,64 @@
+{
+  "goal": "Safely upgrade vulnerable dependency in requirements.txt",
+  "steps": [
+    {
+      "step_number": 1,
+      "tool_name": "read_file",
+      "tool_arguments": {
+        "path": "requirements.txt",
+        "start_line": null,
+        "end_line": null
+      },
+      "expected_outcome": "Read pinned dependencies",
+      "rollback_action": "No rollback"
+    },
+    {
+      "step_number": 2,
+      "tool_name": "run_tests",
+      "tool_arguments": {
+        "test_command": "pytest",
+        "timeout_seconds": 60
+      },
+      "expected_outcome": "Ensure suite passes before bump",
+      "rollback_action": "No rollback"
+    },
+    {
+      "step_number": 3,
+      "tool_name": "apply_patch",
+      "tool_arguments": {
+        "path": "requirements.txt",
+        "original_chunk": "cryptography==41.0.0",
+        "replacement_chunk": "cryptography==42.0.8",
+        "line_number": 5
+      },
+      "expected_outcome": "Bump cryptography to patch CVE",
+      "rollback_action": "Revert requirements.txt"
+    },
+    {
+      "step_number": 4,
+      "tool_name": "run_tests",
+      "tool_arguments": {
+        "test_command": "pytest",
+        "timeout_seconds": 60
+      },
+      "expected_outcome": "Verify test suite passes with bumped library",
+      "rollback_action": "Revert requirements.txt"
+    },
+    {
+      "step_number": 5,
+      "tool_name": "open_pr",
+      "tool_arguments": {
+        "title": "chore(deps): bump cryptography to 42.0.8",
+        "branch": "deps/crypto-bump",
+        "body": "Bumps cryptography to remediate vulnerability."
+      },
+      "expected_outcome": "Submit dependency bump PR",
+      "rollback_action": "Close pull request"
+    }
+  ],
+  "affected_files": [
+    "requirements.txt"
+  ],
+  "estimated_complexity": "Low",
+  "rollback_plan": "Revert requirements.txt and reinstall"
+}
