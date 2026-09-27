@@ -2,11 +2,18 @@
 TeslaLab AI — State Models Bridge for app.agents.agent_1.
 """
 
-from backend.agents.agent_1.state_models import (
-    AgentSessionGraphState,
-    TransitionRequest,
-    IngestionResult,
-)
+try:
+    from backend.agents.agent_1.state_models import (
+        AgentSessionGraphState,
+        TransitionRequest,
+        IngestionResult,
+    )
+except (ImportError, ModuleNotFoundError):
+    from agents.agent_1.state_models import (
+        AgentSessionGraphState,
+        TransitionRequest,
+        IngestionResult,
+    )
 
 __all__ = [
     "AgentSessionGraphState",
