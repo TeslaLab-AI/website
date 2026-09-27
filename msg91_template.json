@@ -1,0 +1,11 @@
+[
+  {
+    "template_name": "TeslaLab Registration",
+    "content": "Your TeslaLab verification code is ##OTP##. Valid for 1 minute.",
+    "sender_id": "MSGIND",
+    "otp_length": 6,
+    "otp_expiry": 1,
+    "category": "OTP",
+    "language": "English"
+  }
+]
