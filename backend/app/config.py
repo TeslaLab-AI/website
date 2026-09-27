@@ -1,0 +1,94 @@
+"""
+Purpose:
+Loads backend environment values used by the GitHub install-start flow.
+
+Responsibilities:
+- Read FASTAPI_STATE_SECRET, GitHub App slug, and Supabase URL/keys.
+- Fail at request time if required values are missing.
+- Never expose the GitHub App private key.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+except ImportError:
+    pass
+
+
+def _require(*names: str) -> str:
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    raise RuntimeError(f"{names[0]} is not configured")
+
+
+def state_secret() -> str:
+    return _require("FASTAPI_STATE_SECRET")
+
+
+def github_app_slug() -> str:
+    return _require("GITHUB_APP_SLUG")
+
+
+def supabase_url() -> str:
+    return _require("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL").rstrip("/")
+
+
+def supabase_publishable_key() -> str:
+    return _require("SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY")
+
+
+def supabase_service_role_key() -> str:
+    return _require("SUPABASE_SERVICE_ROLE_KEY")
+
+
+def github_app_id() -> str:
+    return _require("GITHUB_APP_ID")
+
+
+def github_app_private_key() -> str:
+    # GitHub private keys typically have actual newlines or escaped \n in env vars
+    key = _require("GITHUB_APP_PRIVATE_KEY")
+    return key.replace("\\n", "\n")
+
+
+def frontend_url() -> str:
+    url = os.environ.get("FRONTEND_URL")
+    if url:
+        return url.rstrip("/")
+    if os.environ.get("RENDER") == "true":
+        raise RuntimeError("FRONTEND_URL is not configured for production deployment on Render")
+    return "http://localhost:3000"
+
+
+def msg91_auth_key() -> str:
+    return os.environ.get("MSG91_AUTH_KEY", "").strip()
+
+
+def msg91_template_id() -> str:
+    return os.environ.get("MSG91_TEMPLATE_ID", "").strip()
+
+
+def msg91_sender_id() -> str:
+    return os.environ.get("MSG91_SENDER_ID", "").strip()
+
+
+def msg91_otp_expiry_seconds() -> int:
+    try:
+        return int(os.environ.get("MSG91_OTP_EXPIRY_SECONDS", "60"))
+    except ValueError:
+        return 60
+
+
+def msg91_otp_length() -> int:
+    try:
+        return int(os.environ.get("MSG91_OTP_LENGTH", "6"))
+    except ValueError:
+        return 6
