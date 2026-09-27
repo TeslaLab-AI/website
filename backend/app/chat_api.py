@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
+import os
 import openai
 from typing import List, Dict, Any
 
@@ -8,7 +9,7 @@ from app.github_api import _json_request, _json_post
 from app.github_install import _workspace_id_for_user
 
 router = APIRouter()
-client = openai.OpenAI()
+client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY") or "mock-key-for-dev")
 
 class ChatRequest(BaseModel):
     repository_id: str

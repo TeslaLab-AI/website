@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Header, HTTPException, BackgroundTasks
 from pydantic import BaseModel
+import os
 import openai
 import base64
 import uuid
@@ -12,7 +13,7 @@ from app.agents.agent_1 import pipeline_event_bus as event_bus
 from app.agents.pipeline import run_pipeline
 
 router = APIRouter()
-client = openai.OpenAI()
+client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY") or "mock-key-for-dev")
 
 class FixRequest(BaseModel):
     repository_id: str
