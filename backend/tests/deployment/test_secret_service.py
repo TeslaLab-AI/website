@@ -1,13 +1,13 @@
 import pytest
 
-from deployment.adapters import DeployStatus, FakeAdapter
-from deployment.secret_service import (
+from app.deployment.adapters import DeployStatus, FakeAdapter
+from app.deployment.secret_service import (
     MissingSecretsError,
     SecretService,
     deploy_with_secrets,
 )
-from deployment.secret_store import ENV_VAR, generate_key
-from deployment.secrets_repo import InMemorySecretsRepository
+from app.deployment.secret_store import ENV_VAR, generate_key
+from app.deployment.secrets_repo import InMemorySecretsRepository
 
 A, B = "tenant-a", "tenant-b"
 VALUE = "sk_live_super_secret_value"

@@ -1,4 +1,4 @@
-from deployment.env_detector import detect_env_vars, find_missing, write_env_example
+from app.deployment.env_detector import detect_env_vars, find_missing, write_env_example
 
 
 def write(path, text):

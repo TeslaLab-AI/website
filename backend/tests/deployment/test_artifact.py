@@ -3,7 +3,7 @@ import tarfile
 
 import pytest
 
-from deployment.artifact import create_artifact, sha256_file, verify_artifact
+from app.deployment.artifact import create_artifact, sha256_file, verify_artifact
 
 
 @pytest.fixture
