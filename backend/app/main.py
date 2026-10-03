@@ -9,6 +9,10 @@ Responsibilities:
 import sys
 from pathlib import Path
 
+from app.deployment.log_masking import install_log_masking
+
+install_log_masking()
+
 _backend_root = Path(__file__).resolve().parents[1]
 _repo_root = _backend_root.parent
 for _p in (str(_backend_root), str(_repo_root)):
