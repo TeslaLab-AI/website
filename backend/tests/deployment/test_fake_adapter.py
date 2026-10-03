@@ -1,6 +1,6 @@
 import pytest
 
-from deployment.adapters import (
+from app.deployment.adapters import (
     DeploymentNotFound,
     DeployStatus,
     FakeAdapter,
