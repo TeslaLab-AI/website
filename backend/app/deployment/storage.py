@@ -25,8 +25,8 @@ from typing import Protocol
 from .artifact import sha256_file
 
 SUFFIX = ".tar.gz"
-_SAFE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-_SHA = re.compile(r"^[0-9a-f]{64}$")
+_SAFE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
+_SHA = re.compile(r"^[0-9a-f]{64}\Z")
 
 
 class StorageError(Exception):

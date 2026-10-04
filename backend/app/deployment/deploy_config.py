@@ -34,8 +34,8 @@ ALLOWED_INSTALL = {
     "pnpm install --frozen-lockfile",
     "yarn install --frozen-lockfile",
 }
-_RUN_COMMAND = re.compile(r"^((npm|pnpm) run|yarn) [A-Za-z0-9:_-]+$|^npx next (build|start)$")
-_ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_RUN_COMMAND = re.compile(r"^((npm|pnpm) run|yarn) [A-Za-z0-9:_-]+\Z|^npx next (build|start)\Z")
+_ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\Z")
 _FIELDS = (
     "schema_version", "framework", "node_version", "install_command",
     "build_command", "start_command", "output_directory", "required_env", "database",

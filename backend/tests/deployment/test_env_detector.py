@@ -54,3 +54,8 @@ def test_write_env_example_merges_and_preserves_existing(tmp_path):
     assert "# my notes" in text and "EXISTING=default-ok" in text
     assert text.count("EXISTING") == 1
     assert "NEW_VAR=\n" in text
+
+
+def test_destructured_names_with_whitespace_are_clean(tmp_path):
+    write(tmp_path / "a.ts", "const {\n  FIRST_VAR,\n  SECOND_VAR\n} = process.env;")
+    assert detect_env_vars(tmp_path) == {"FIRST_VAR", "SECOND_VAR"}

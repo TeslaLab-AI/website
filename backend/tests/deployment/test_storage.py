@@ -188,3 +188,12 @@ def test_supabase_upload_failure_is_wrapped_without_leaking_details(artifact_fil
     with pytest.raises(StorageError) as exc:
         storage.upload(A, "proj1", "1.0.0", artifact_file, SHA)
     assert "secret-connection-detail" not in str(exc.value)
+
+
+def test_key_parts_and_checksums_with_trailing_newline_are_rejected(harness, artifact_file, tmp_path):
+    with pytest.raises(InvalidKeyError):
+        harness.storage.upload(A, "proj1", "1.0.0\n", artifact_file, SHA)
+    with pytest.raises(InvalidKeyError):
+        harness.storage.upload("tenant-a\n", "proj1", "1.0.0", artifact_file, SHA)
+    with pytest.raises(ValueError):
+        harness.storage.upload(A, "proj1", "1.0.0", artifact_file, SHA + "\n")

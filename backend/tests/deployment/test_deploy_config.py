@@ -245,3 +245,14 @@ def test_load_rejects_unreadable_or_invalid_file(tmp_path):
     bad.write_text("{oops")
     with pytest.raises(DeployConfigError):
         load_deploy_json(bad)
+
+
+# -- regression: a trailing newline must not slip past validation -------------
+@pytest.mark.parametrize("change", [
+    {"build_command": "npm run build\n"},
+    {"start_command": "npm run start\n"},
+    {"required_env": ["A_VAR\n"]},
+])
+def test_trailing_newline_is_rejected(change):
+    with pytest.raises(DeployConfigError):
+        parse_deploy_config({**valid_dict(), **change})

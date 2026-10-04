@@ -15,7 +15,7 @@ from .secret_store import decrypt as default_decrypt
 from .secret_store import encrypt as default_encrypt
 from .secrets_repo import SecretsRepository
 
-KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\Z")
 MAX_VALUE_LENGTH = 10_000
 
 

@@ -26,7 +26,7 @@ from .log_masking import mask_secrets
 
 GITHUB_API = "https://api.github.com"
 RETRY_STATUS = {429, 500, 502, 503, 504}
-_BRANCH_RE = re.compile(r"^[A-Za-z0-9._/-]{1,100}$")
+_BRANCH_RE = re.compile(r"^[A-Za-z0-9._/-]{1,100}\Z")
 _GITIGNORE_DEFAULT = ".env\n.env.*\n!.env.example\nnode_modules/\n.next/\n__pycache__/\n"
 
 

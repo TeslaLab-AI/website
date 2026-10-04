@@ -102,3 +102,8 @@ def test_deploy_stops_when_required_variables_are_missing(service):
         )
     assert exc.value.names == ["DATABASE_URL"]
     assert VALUE not in str(exc.value)
+
+
+def test_variable_name_with_trailing_newline_is_rejected(service):
+    with pytest.raises(ValueError):
+        service.set_secret(A, "p1", "STRIPE_KEY\n", VALUE)
