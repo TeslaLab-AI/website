@@ -92,3 +92,34 @@ def test_rejects_bad_inputs(project, tmp_path):
         create_artifact(project, tmp_path / "out", "../evil", "1.0.0")
     with pytest.raises(ValueError):
         create_artifact(project, tmp_path / "out", "p", "")
+
+
+# -- extra_files (used to embed deploy.json) -----------------------------
+def test_extra_files_are_added_and_counted(project, tmp_path):
+    plain = create_artifact(project, tmp_path / "o1", "proj1", "1.0.0")
+    extra = create_artifact(project, tmp_path / "o2", "proj1", "1.0.0",
+                            extra_files={"deploy.json": b"{}"})
+    assert "deploy.json" in members(extra.path)
+    assert extra.file_count == plain.file_count + 1
+
+
+def test_extra_file_replaces_same_named_file_on_disk(project, tmp_path):
+    (project / "deploy.json").write_text("from disk")
+    art = create_artifact(project, tmp_path / "out", "proj1", "1.0.0",
+                          extra_files={"deploy.json": b"from memory"})
+    with tarfile.open(art.path) as tar:
+        names = [m.name for m in tar.getmembers()]
+        assert names.count("deploy.json") == 1
+        assert tar.extractfile("deploy.json").read() == b"from memory"
+
+
+def test_extra_files_keep_checksum_reproducible(project, tmp_path):
+    first = create_artifact(project, tmp_path / "o1", "p", "1", extra_files={"deploy.json": b"{}"})
+    second = create_artifact(project, tmp_path / "o2", "p", "1", extra_files={"deploy.json": b"{}"})
+    assert first.sha256 == second.sha256
+
+
+@pytest.mark.parametrize("bad", ["../x", "/abs", ".env", "a\\b", ""])
+def test_bad_extra_file_names_are_rejected(project, tmp_path, bad):
+    with pytest.raises(ValueError):
+        create_artifact(project, tmp_path / "out", "p", "1", extra_files={bad: b"x"})

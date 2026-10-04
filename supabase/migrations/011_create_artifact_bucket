@@ -1,0 +1,13 @@
+-- Private bucket for deployment packages (.tar.gz) used by the Deployment Engine.
+-- NOTE: rename this file to match the numbering style of the other migrations
+-- (for example 011_create_artifact_bucket.sql).
+--
+-- The bucket is private and no storage policies are created on purpose, so
+-- anon/authenticated users cannot read or write it. The backend uses the
+-- service role key (server-side only), which bypasses these checks.
+-- Objects are stored as {tenant_id}/{project_id}/{version}.tar.gz.
+-- Supabase limits the size of each file depending on your plan; check it.
+
+insert into storage.buckets (id, name, public)
+values ('deployment-artifacts', 'deployment-artifacts', false)
+on conflict (id) do nothing;

@@ -18,7 +18,8 @@ import sys
 import tarfile
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import Mapping
 
 from .github_service import _is_forbidden_path
 
@@ -45,7 +46,7 @@ def sha256_file(path: str | Path) -> str:
     return digest.hexdigest()
 
 
-def _collect_files(project_dir: Path) -> list[Path]:
+def _collect_files(project_dir: Path, skip: frozenset[str] = frozenset()) -> list[Path]:
     files: list[Path] = []
     for root, dirs, names in os.walk(project_dir):
         dirs[:] = sorted(
@@ -58,7 +59,7 @@ def _collect_files(project_dir: Path) -> list[Path]:
         )
         for name in sorted(names):
             rel = (Path(root) / name).relative_to(project_dir).as_posix()
-            if _is_forbidden_path(rel) or rel.startswith(EXCLUDED_PATH_PREFIXES):
+            if _is_forbidden_path(rel) or rel.startswith(EXCLUDED_PATH_PREFIXES) or rel in skip:
                 continue
             files.append(Path(root) / name)
     return files
@@ -69,7 +70,16 @@ def create_artifact(
     output_dir: str | Path,
     project_id: str,
     version: str,
+    extra_files: Mapping[str, bytes] | None = None,
 ) -> Artifact:
+    """Package project_dir. extra_files (name -> bytes) are added to the archive and
+    replace any file of the same name on disk (used for deploy.json)."""
+    extras = dict(extra_files or {})
+    for name in extras:
+        parts = PurePosixPath(name).parts
+        if (not name or name.startswith("/") or "\\" in name or ".." in parts
+                or _is_forbidden_path(name)):
+            raise ValueError(f"Invalid extra file name: {name!r}")
     project_dir = Path(project_dir)
     output_dir = Path(output_dir)
     if not project_dir.is_dir():
@@ -81,8 +91,8 @@ def create_artifact(
             raise ValueError("project_id and version must not contain slashes or spaces")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    files = _collect_files(project_dir)
-    if not files:
+    files = _collect_files(project_dir, frozenset(extras))
+    if not files and not extras:
         raise ValueError("No files to package")
 
     archive_path = output_dir / f"{project_id}-{version}.tar.gz"
@@ -98,6 +108,12 @@ def create_artifact(
                 info.mode = 0o644
                 with open(file, "rb") as f:
                     tar.addfile(info, f)
+            for name in sorted(extras):
+                info = tarfile.TarInfo(name)
+                info.size = len(extras[name])
+                info.mtime = 0
+                info.mode = 0o644
+                tar.addfile(info, io.BytesIO(extras[name]))
     archive_path.write_bytes(buffer.getvalue())
 
     artifact = Artifact(
@@ -106,7 +122,7 @@ def create_artifact(
         path=str(archive_path),
         sha256=sha256_file(archive_path),
         size_bytes=archive_path.stat().st_size,
-        file_count=len(files),
+        file_count=len(files) + len(extras),
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     manifest = output_dir / f"{project_id}-{version}.manifest.json"
