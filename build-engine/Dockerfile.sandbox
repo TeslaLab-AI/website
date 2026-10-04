@@ -1,0 +1,8 @@
+FROM node:20-slim
+
+# The image already ships a non-root "node" user (uid 1000); everything runs as it.
+WORKDIR /workspace
+
+USER node
+
+CMD ["node", "--version"]
