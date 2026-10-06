@@ -55,3 +55,11 @@ Every query filters by `tenant_id`; another tenant's project returns **404**.
 - `POST /projects` -> 201 `ProjectRead`
 - `GET /projects/{id}` -> 200 `ProjectRead` | 404
 - `GET /projects` -> 200 `list[ProjectRead]` (caller's tenant only)
+
+## Day 2 preview and template
+
+The development preview container has outbound network access; restrict it with an egress allowlist on Day 5. It listens on `0.0.0.0:3000` in the container and is published only on `127.0.0.1`.
+
+Prepare the base template once using the Docker command below; keep `templates/base/node_modules` local-only and out of Git.
+Dev server has outbound network access; restrict with an egress allowlist on Day 5.
+On Windows, install Linux-compatible template dependencies from the repository root with: `docker run --rm --network bridge --user node --mount "type=bind,source=$($PWD.Path)\templates\base,target=/workspace" -w /workspace teslalab-sandbox:latest npm install`.
