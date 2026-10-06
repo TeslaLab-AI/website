@@ -146,37 +146,42 @@ def test_env_vars_detected_from_source(tmp_path):
 
 def test_plan_env_names_are_added_and_validated(tmp_path):
     root = make_project(tmp_path / "app")
-    config = gen(root, {"env": ["API_URL", {"name": "SMTP_HOST"}]}).config
+    config = gen(root, {"env_vars": ["API_URL", "SMTP_HOST"]}).config
     assert config.required_env == ("API_URL", "SMTP_HOST")
     with pytest.raises(DeployConfigError):
-        gen(root, {"env": ["bad name; rm -rf /"]})
+        gen(root, {"env_vars": ["bad name; rm -rf /"]})
+    with pytest.raises(DeployConfigError):
+        gen(root, {"env_vars": [{"name": "NOT_A_STRING"}]})
 
 
 def test_database_adds_default_database_url(tmp_path):
-    config = gen(make_project(tmp_path / "app"), {"db": {"tables": ["users"]}}).config
+    config = gen(make_project(tmp_path / "app"), {"db": {"tables": [{"name": "users", "columns": [{"name": "id", "type": "uuid", "nullable": False}]}]}}).config
     assert config.database is True
     assert config.required_env == ("DATABASE_URL",)
 
 
 def test_database_with_supabase_usage_requires_supabase_pair(tmp_path):
     root = make_project(tmp_path / "app", files={"lib/db.ts": "process.env.NEXT_PUBLIC_SUPABASE_URL"})
-    config = gen(root, {"database": True}).config
+    config = gen(root, {"db": {"tables": [{"name": "users", "columns": []}]}}).config
     assert config.required_env == ("NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_URL")
 
 
 def test_no_database_means_no_db_variables(tmp_path):
     assert gen(make_project(tmp_path / "app"), {"db": None}).config.required_env == ()
+    assert gen(make_project(tmp_path / "b"), {"db": {"tables": []}}).config.database is False
 
 
 def test_service_role_key_is_never_auto_required():
     assert "SUPABASE_SERVICE_ROLE_KEY" not in database_env_names({"SUPABASE_URL"})
 
 
-def test_hints_from_plan_is_tolerant():
+def test_hints_from_plan_v1_keys_only():
     assert hints_from_plan(None) == (False, [])
     assert hints_from_plan({}) == (False, [])
-    assert hints_from_plan({"db": []}) == (False, [])
-    assert hints_from_plan({"database": {"x": 1}, "env_vars": ["A"]}) == (True, ["A"])
+    assert hints_from_plan({"db": {"tables": []}}) == (False, [])
+    assert hints_from_plan({"db": {"tables": [{"name": "t"}]}, "env_vars": ["A"]}) == (True, ["A"])
+    # guessed keys from before the schema was frozen are ignored
+    assert hints_from_plan({"database": {"tables": [{"name": "t"}]}, "env": ["A"]}) == (False, [])
 
 
 # -- file round trip and strict validation -----------------------------
