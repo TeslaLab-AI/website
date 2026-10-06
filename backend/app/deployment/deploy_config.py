@@ -207,20 +207,17 @@ def database_env_names(detected: set[str]) -> set[str]:
 
 
 def hints_from_plan(plan: Mapping | None) -> tuple[bool, list[str]]:
-    """Read database and env hints from the Plan JSON.
+    """Read hints from Plan JSON v1 (docs/plan.v1.schema.json).
 
-    PROVISIONAL: the Plan JSON schema is not frozen yet. Update the key names
-    here when Intern 1 freezes schema v1. Returns (has_database, env_names).
+    plan.db        -> {"tables": [{name, columns: [{name, type, nullable}]}]}
+    plan.env_vars  -> list of UPPERCASE variable names (names only)
+    A database counts only if it has at least one table. Returns (has_database, env_names).
     """
     if not plan:
         return False, []
-    has_db = bool(plan.get("db", plan.get("database")))
-    names: list[str] = []
-    for item in plan.get("env") or plan.get("env_vars") or []:
-        name = item if isinstance(item, str) else (item.get("name") if isinstance(item, dict) else None)
-        if name:
-            names.append(name)
-    return has_db, names
+    db = plan.get("db")
+    tables = db.get("tables") if isinstance(db, Mapping) else db
+    return bool(tables), list(plan.get("env_vars") or [])
 
 
 def generate_deploy_config(project_dir: str | Path, plan: Mapping | None = None) -> GenerationResult:
