@@ -1,0 +1,203 @@
+{
+  "$defs": {
+    "API": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "path",
+        "purpose"
+      ],
+      "title": "API",
+      "type": "object"
+    },
+    "Column": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "nullable": {
+          "title": "Nullable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "nullable"
+      ],
+      "title": "Column",
+      "type": "object"
+    },
+    "File": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "purpose"
+      ],
+      "title": "File",
+      "type": "object"
+    },
+    "Page": {
+      "additionalProperties": false,
+      "properties": {
+        "route": {
+          "title": "Route",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "route",
+        "title",
+        "purpose"
+      ],
+      "title": "Page",
+      "type": "object"
+    },
+    "Table": {
+      "additionalProperties": false,
+      "properties": {
+        "table": {
+          "title": "Table",
+          "type": "string"
+        },
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/Column"
+          },
+          "title": "Columns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "table",
+        "columns"
+      ],
+      "title": "Table",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1",
+      "title": "Version",
+      "type": "string"
+    },
+    "app_type": {
+      "enum": [
+        "website",
+        "web_app",
+        "ai_agent"
+      ],
+      "title": "App Type",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirements",
+      "type": "array"
+    },
+    "pages": {
+      "items": {
+        "$ref": "#/$defs/Page"
+      },
+      "maxItems": 12,
+      "title": "Pages",
+      "type": "array"
+    },
+    "features": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Features",
+      "type": "array"
+    },
+    "db": {
+      "items": {
+        "$ref": "#/$defs/Table"
+      },
+      "title": "Db",
+      "type": "array"
+    },
+    "apis": {
+      "items": {
+        "$ref": "#/$defs/API"
+      },
+      "title": "Apis",
+      "type": "array"
+    },
+    "env_vars": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Env Vars",
+      "type": "array"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/File"
+      },
+      "maxItems": 25,
+      "title": "Files",
+      "type": "array"
+    }
+  },
+  "required": [
+    "version",
+    "app_type",
+    "name",
+    "requirements",
+    "pages",
+    "features",
+    "db",
+    "apis",
+    "env_vars",
+    "files"
+  ],
+  "title": "Plan",
+  "type": "object"
+}

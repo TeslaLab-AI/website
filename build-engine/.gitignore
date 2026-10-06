@@ -1,0 +1,5 @@
+.env
+node_modules/
+sandboxes/
+.pytest_cache/
+__pycache__/
