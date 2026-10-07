@@ -27,8 +27,8 @@ from typing import Iterator, Optional
 
 import httpx
 
-from ..log_masking import mask_secrets
-from .base import (
+from .log_masking import mask_secrets
+from .adapters.base import (
     DeploymentAdapter,
     DeploymentError,
     DeploymentNotFound,

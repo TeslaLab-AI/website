@@ -1,6 +1,7 @@
 import pytest
 
 from app.deployment.adapters import (
+    DeploymentError,
     DeploymentNotFound,
     DeployStatus,
     FakeAdapter,
@@ -84,8 +85,8 @@ def test_rollback_blocked_across_tenants_and_projects():
         adapter.rollback(TENANT, "different-project", dep.deployment_id)
 
 
-def test_vercel_adapter_stub_and_token_not_in_repr():
+def test_vercel_adapter_token_not_in_repr_and_bad_url_rejected():
     adapter = VercelAdapter(token="vercel_secret_token")
     assert "vercel_secret_token" not in repr(adapter)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(DeploymentError):  # not a GitHub URL; rejected before any request
         adapter.deploy(TENANT, "p", "url", "main", {})
